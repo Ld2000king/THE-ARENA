@@ -1,0 +1,12 @@
+# מערכת הפעלה
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# תלויות (המשחק לא משתמש באף אחת — ליתר ביטחון)
+node_modules/
+
+# עורכים
+.vscode/
+.idea/
+*.swp

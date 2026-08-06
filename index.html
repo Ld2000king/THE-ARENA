@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#0c0d10">
+<title>הזירה</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="app">
+
+    <!-- ==================== מסך הבית ==================== -->
+    <section id="homeScreen" class="screen active">
+        <div class="home-content">
+            <div class="crest" id="crest"></div>
+            <h1 class="main-title">הזירה</h1>
+            <p class="tagline">קרב מפלצות · הכוח הגבוה מנצח</p>
+
+            <div class="home-actions">
+                <button class="mega-btn primary-cta" id="btnPlay">התחל קרב</button>
+                <button class="mega-btn btn-blue" id="btnEdit">ערוך חפיסה</button>
+                <button class="mega-btn btn-purple" id="btnCodex">אוסף המפלצות</button>
+                <button class="mega-btn btn-ghost" id="btnRules">חוקי המשחק</button>
+            </div>
+
+            <div class="home-foot">20 קלפים בחפיסה · 20 מפלצות · 9 יכולות</div>
+        </div>
+    </section>
+
+    <!-- ==================== מסך המשחק ==================== -->
+    <section id="gameScreen" class="screen">
+        <header class="top-bar">
+            <button class="icon-btn btn-red-soft" id="btnQuit" aria-label="יציאה">
+                <svg viewBox="0 0 24 24"><path d="M6 6 L18 18 M18 6 L6 18"/></svg>
+            </button>
+            <div class="round-chip">סיבוב <span id="roundNum">1</span></div>
+            <span style="width:40px"></span>
+        </header>
+
+        <!-- יריב -->
+        <div class="player-strip enemy">
+            <div class="avatar enemy-avatar" id="enemyAvatar"></div>
+            <div class="strip-text">
+                <span class="strip-name">היריב</span>
+                <div class="deck-bar"><i id="enemyBar"></i></div>
+            </div>
+            <div class="deck-count" id="enemyCount">20</div>
+        </div>
+
+        <!-- הזירה -->
+        <div class="arena">
+            <div class="war-banner" id="warBanner"><span>מצב מלחמה</span></div>
+
+            <div class="lane">
+                <div class="slot" id="enemySlot"></div>
+                <div class="power-readout" id="enemyPower"></div>
+            </div>
+
+            <div class="center-col">
+                <div class="vs-badge" id="vsBadge">VS</div>
+            </div>
+
+            <div class="lane">
+                <div class="slot" id="playerSlot"></div>
+                <div class="power-readout" id="playerPower"></div>
+            </div>
+        </div>
+
+        <!-- הודעת הסיבוב -->
+        <div class="verdict" id="verdict">
+            <div class="verdict-title" id="verdictTitle">מוכנים?</div>
+            <div class="verdict-sub" id="verdictSub">לחצו "שלוף" כדי לחשוף קלפים</div>
+        </div>
+
+        <!-- שחקן -->
+        <div class="player-strip me">
+            <div class="avatar me-avatar" id="meAvatar"></div>
+            <div class="strip-text">
+                <span class="strip-name">אתם</span>
+                <div class="deck-bar"><i id="playerBar"></i></div>
+            </div>
+            <div class="deck-count" id="playerCount">20</div>
+        </div>
+
+        <div class="draw-dock">
+            <button class="mega-btn draw-btn" id="btnDraw">שלוף!</button>
+        </div>
+    </section>
+
+    <!-- ==================== עריכת החפיסה ==================== -->
+    <section id="editScreen" class="screen">
+        <header class="top-bar">
+            <button class="icon-btn btn-red-soft" id="btnEditBack" aria-label="חזרה">
+                <svg viewBox="0 0 24 24"><path d="M6 6 L18 18 M18 6 L6 18"/></svg>
+            </button>
+            <div class="round-chip">עריכת החפיסה</div>
+            <button class="icon-btn" id="btnReset" aria-label="איפוס">
+                <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4"/></svg>
+            </button>
+        </header>
+
+        <div class="deck-meter">
+            <div class="meter-head">
+                <span id="deckCountLabel">20 / 20 קלפים</span>
+                <span id="deckPowerLabel">כוח כולל 115</span>
+            </div>
+            <div class="deck-bar big"><i id="deckMeterBar"></i></div>
+            <p class="meter-hint">עד 3 עותקים מכל מפלצת. היריב יבנה חפיסה בעוצמה דומה לשלכם.</p>
+        </div>
+
+        <div class="edit-list" id="editList"></div>
+
+        <div class="draw-dock">
+            <button class="mega-btn primary-cta" id="btnSaveDeck">שמור והתחל קרב</button>
+        </div>
+    </section>
+
+    <!-- ==================== אוסף המפלצות ==================== -->
+    <section id="codexScreen" class="screen">
+        <header class="top-bar">
+            <button class="icon-btn btn-red-soft codex-back" aria-label="חזרה">
+                <svg viewBox="0 0 24 24"><path d="M6 6 L18 18 M18 6 L6 18"/></svg>
+            </button>
+            <div class="round-chip">אוסף המפלצות</div>
+            <span style="width:40px"></span>
+        </header>
+        <div class="codex-grid" id="codexGrid"></div>
+    </section>
+
+    <!-- ==================== חלונות ==================== -->
+    <div class="overlay" id="rulesOverlay">
+        <div class="sheet">
+            <h2 class="sheet-title">חוקי הזירה</h2>
+            <ol class="rules-list">
+                <li>לכל צד חפיסה של <b>20 קלפי מפלצות</b>.</li>
+                <li>בכל סיבוב לוחצים <b>"שלוף!"</b> ושני הקלפים העליונים נחשפים.</li>
+                <li>הקלף עם <b>רמת הכוח הגבוהה</b> מנצח וחוזר לתחתית החפיסה של בעליו.</li>
+                <li>הקלף המפסיד <b>מודח מהזירה לצמיתות</b> — כל הפסד מקטין לכם את החפיסה.</li>
+                <li>לכל קלף יש <b>יכולת מיוחדת</b> שמשנה את הכוח או את תוצאת הסיבוב.</li>
+                <li>בתיקו נכנסים ל<b>מצב מלחמה</b>: כל צד מניח 2 קלפים הפוכים מהחפיסה, ואז נשלף קלף שלישי מכריע. המנצח לוקח את <b>כל הערימה</b> לחפיסה שלו.</li>
+                <li>המשחק נגמר כשלאחד הצדדים <b>נגמרו הקלפים</b>.</li>
+            </ol>
+            <div class="ability-legend" id="abilityLegend"></div>
+            <button class="mega-btn btn-ghost close-overlay">הבנתי</button>
+        </div>
+    </div>
+
+    <div class="overlay" id="resultOverlay">
+        <div class="sheet result-sheet">
+            <div class="result-emblem" id="resultEmblem"></div>
+            <h2 class="sheet-title" id="resultTitle">ניצחון!</h2>
+            <p class="result-sub" id="resultSub"></p>
+            <div class="result-stats" id="resultStats"></div>
+            <button class="mega-btn primary-cta" id="btnRematch">קרב חוזר</button>
+            <button class="mega-btn btn-ghost" id="btnHome">חזרה למסך הבית</button>
+        </div>
+    </div>
+
+</div>
+
+<script src="monsters.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
