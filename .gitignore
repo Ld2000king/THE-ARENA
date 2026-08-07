@@ -10,3 +10,6 @@ node_modules/
 .vscode/
 .idea/
 *.swp
+
+# הגדרות מקומיות של Claude Code
+.claude/settings.local.json
