@@ -195,23 +195,28 @@ function monsterSVG(a, cls = '') {
 /* לכל מפלצת: שם, כוח, יכולת, אלמנט (צבע המסגרת) וציור */
 
 const CARD_POOL = [
-    { id: 1, name: 'עריץ הכאוס', power: 10, ability: 'none', el: 'red',
-      art: { body: 'spiky', c1: '#B3372E', c2: '#F0C24A', eyes: 3, eyeStyle: 'glow', horns: 'crown', mouth: 'maw', extra: 'shards', front: 'plates' } },
+    { id: 1, name: 'אגרוף האופל', power: 10, ability: 'none', el: 'purple',
+      img: 'art/dark-fist.png', imgPos: 'center 25%',
+      art: { body: 'spiky', c1: '#5B4FCF', c2: '#C77BF5', eyes: 2, eyeStyle: 'angry', horns: 'crown', mouth: 'maw', extra: 'shards', front: 'plates' } },
 
-    { id: 2, name: 'גורגון הלהבה', power: 9, ability: 'none', el: 'orange',
-      art: { body: 'tall', c1: '#A85A1E', c2: '#F2A03C', eyes: 2, eyeStyle: 'angry', horns: 'twin', mouth: 'fangs', extra: 'aura', front: 'belly' } },
+    { id: 2, name: 'דרקון הלבה', power: 9, ability: 'none', el: 'red',
+      img: 'art/lava-dragon.png', imgPos: 'center 25%',
+      art: { body: 'beast', c1: '#8F2A16', c2: '#F56A1E', eyes: 2, eyeStyle: 'angry', horns: 'twin', mouth: 'fangs', extra: 'wings', front: 'plates' } },
 
-    { id: 3, name: 'טיטאן האבן', power: 8, ability: 'shield', el: 'green',
-      art: { body: 'beast', c1: '#4F5B52', c2: '#8FCF9E', eyes: 2, eyeStyle: 'glow', horns: 'ears', mouth: 'grin', extra: 'none', front: 'plates' } },
+    { id: 3, name: 'גולם הקרח', power: 8, ability: 'shield', el: 'blue',
+      img: 'art/ice-golem.png', imgPos: 'center 28%',
+      art: { body: 'beast', c1: '#3F5B72', c2: '#7FE4FF', eyes: 2, eyeStyle: 'glow', horns: 'crown', mouth: 'grin', extra: 'shards', front: 'plates' } },
 
     { id: 4, name: 'מלך העצמות', power: 8, ability: 'weaken', el: 'purple',
+      img: 'art/lich-king.png', imgPos: 'center 18%',
       art: { body: 'tall', c1: '#D9D6E0', c2: '#5B4FCF', eyes: 2, eyeStyle: 'glow', horns: 'crown', mouth: 'grin', extra: 'aura', front: 'none' } },
 
     { id: 5, name: 'דרקונית הקרח', power: 7, ability: 'weaken', el: 'blue',
       art: { body: 'beast', c1: '#4E7FD6', c2: '#BFE4FF', eyes: 2, eyeStyle: 'slit', horns: 'twin', mouth: 'fangs', extra: 'wings', front: 'belly' } },
 
-    { id: 6, name: 'להביור', power: 7, ability: 'boost', el: 'orange',
-      art: { body: 'blob', c1: '#C1521C', c2: '#F5C542', eyes: 1, eyeStyle: 'glow', horns: 'none', mouth: 'maw', extra: 'aura', front: 'spots' } },
+    { id: 6, name: 'נזיר הסופה', power: 7, ability: 'boost', el: 'blue',
+      img: 'art/blue-fist-monk.png', imgPos: 'center 20%',
+      art: { body: 'tall', c1: '#E8EAF0', c2: '#4E9FD6', eyes: 2, eyeStyle: 'angry', horns: 'none', mouth: 'grin', extra: 'aura', front: 'none' } },
 
     { id: 7, name: 'תולעת המעמקים', power: 7, ability: 'vampire', el: 'pink',
       art: { body: 'ghost', c1: '#7A2F52', c2: '#C24E7A', eyes: 4, eyeStyle: 'glow', horns: 'none', mouth: 'maw', extra: 'tentacles', front: 'plates' } },
@@ -219,23 +224,27 @@ const CARD_POOL = [
     { id: 8, name: 'ערפד הליל', power: 6, ability: 'vampire', el: 'purple',
       art: { body: 'tall', c1: '#3B3468', c2: '#C24E7A', eyes: 2, eyeStyle: 'angry', horns: 'ears', mouth: 'fangs', extra: 'wings', front: 'none' } },
 
-    { id: 9, name: 'גולם החלודה', power: 6, ability: 'tie', el: 'orange',
-      art: { body: 'beast', c1: '#8F4A16', c2: '#D9A24A', eyes: 1, eyeStyle: 'glow', horns: 'none', mouth: 'zigzag', extra: 'none', front: 'plates' } },
+    { id: 9, name: 'חלוץ הברזל', power: 6, ability: 'tie', el: 'orange',
+      img: 'art/iron-vanguard.png', imgPos: 'center 45%',
+      art: { body: 'beast', c1: '#A8441E', c2: '#F0C24A', eyes: 1, eyeStyle: 'glow', horns: 'twin', mouth: 'zigzag', extra: 'none', front: 'plates' } },
 
-    { id: 10, name: 'עכביש הקריסטל', power: 6, ability: 'steal', el: 'blue',
+    { id: 10, name: 'עכביש הפלדה', power: 6, ability: 'steal', el: 'blue',
+      img: 'art/steel-spider.png', imgPos: 'center 40%',
       art: { body: 'crystal', c1: '#3A65B8', c2: '#9FD8FF', eyes: 4, eyeStyle: 'slit', horns: 'none', mouth: 'tiny', extra: 'tentacles', front: 'none' } },
 
     { id: 11, name: 'נסיכת הרעל', power: 6, ability: 'nullify', el: 'green',
       art: { body: 'tall', c1: '#147A4A', c2: '#C7F5B0', eyes: 2, eyeStyle: 'slit', horns: 'antenna', mouth: 'tiny', extra: 'aura', front: 'spots' } },
 
-    { id: 12, name: 'עין התהום', power: 5, ability: 'nullify', el: 'purple',
-      art: { body: 'blob', c1: '#5B4FCF', c2: '#F0E6A8', eyes: 1, eyeStyle: 'slit', horns: 'none', mouth: 'zigzag', extra: 'tentacles', front: 'none' } },
+    { id: 12, name: 'אשף הארגמן', power: 5, ability: 'nullify', el: 'pink',
+      img: 'art/crimson-warlock.png', imgPos: 'center 22%',
+      art: { body: 'tall', c1: '#2C2740', c2: '#C24E7A', eyes: 2, eyeStyle: 'glow', horns: 'none', mouth: 'grin', extra: 'aura', front: 'none' } },
 
     { id: 13, name: 'כרישון החול', power: 5, ability: 'boost', el: 'gold',
       art: { body: 'wide', c1: '#C99A2E', c2: '#5A3F12', eyes: 2, eyeStyle: 'angry', horns: 'none', mouth: 'grin', extra: 'tail', front: 'belly' } },
 
-    { id: 14, name: 'שומר השער', power: 5, ability: 'shield', el: 'blue',
-      art: { body: 'crystal', c1: '#2F5A9E', c2: '#8FB8F5', eyes: 1, eyeStyle: 'glow', horns: 'single', mouth: 'none', extra: 'aura', front: 'plates' } },
+    { id: 14, name: 'שומר התכלת', power: 5, ability: 'shield', el: 'blue',
+      img: 'art/azure-guardian.png', imgPos: 'center 20%',
+      art: { body: 'tall', c1: '#1E3A6E', c2: '#4FC8FF', eyes: 2, eyeStyle: 'glow', horns: 'none', mouth: 'grin', extra: 'aura', front: 'plates' } },
 
     { id: 15, name: 'פטריון רעל', power: 4, ability: 'weaken', el: 'green',
       art: { body: 'dome', c1: '#2FBE85', c2: '#12432F', eyes: 2, eyeStyle: 'glow', horns: 'none', mouth: 'tiny', extra: 'none', front: 'spots' } },

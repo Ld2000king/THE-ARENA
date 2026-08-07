@@ -105,11 +105,31 @@ function abilityChip(key) {
     </div>`;
 }
 
+/* ציור הקלף: תמונה אם הוגדרה, אחרת המפלצת המצוירת.
+   אם קובץ התמונה חסר — onerror מסמן את המסגרת ונופלים חזרה לציור. */
+function artHTML(card) {
+    if (!card.img) return monsterSVG(card.art);
+    const pos = card.imgPos || 'center 25%';
+    /* בלי loading="lazy" בכוונה: תמונה עצלה שלא נטענת כלל לא יורה onerror,
+       והגיבוי לא היה מופעל — הקלף היה נשאר ריק. */
+    return `<img class="mon-img" src="${card.img}" alt="" decoding="async"
+        style="object-position:${pos}"
+        onerror="markArtFailed(this)"
+        onload="if(!this.naturalWidth) markArtFailed(this)">
+        ${monsterSVG(card.art)}`;
+}
+
+/* נופלים חזרה למפלצת המצוירת כשקובץ התמונה חסר או פגום */
+function markArtFailed(img) {
+    const box = img.closest('.card-art, .edit-art');
+    if (box) box.classList.add('img-failed');
+}
+
 function cardFrontHTML(card) {
     return `<div class="card-face card-front el-${card.el}">
-        <div class="card-art">
+        <div class="card-art${card.img ? ' has-img' : ''}">
             <div class="power-badge">${card.power}</div>
-            ${monsterSVG(card.art)}
+            ${artHTML(card)}
         </div>
         <div class="card-name">${card.name}</div>
         ${abilityChip(card.ability)}
@@ -453,9 +473,9 @@ function startGame() {
 let draftCounts = {};
 
 function miniArt(card) {
-    return `<div class="edit-art el-${card.el}">
+    return `<div class="edit-art el-${card.el}${card.img ? ' has-img' : ''}">
         <div class="power-badge">${card.power}</div>
-        ${monsterSVG(card.art)}
+        ${artHTML(card)}
     </div>`;
 }
 

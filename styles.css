@@ -515,6 +515,34 @@ button, [role="button"], .clickable { touch-action: manipulation; }
 .card-art .mon { animation: idleBob 3.4s ease-in-out infinite; }
 @keyframes idleBob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
 
+/* ---- ציור מבוסס תמונה ---- */
+.mon-img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    -webkit-user-drag: none;
+    user-select: none;
+}
+/* כשיש תמונה — הציור המצויר מוסתר ומשמש רק כגיבוי */
+.card-art.has-img .mon,
+.edit-art.has-img .mon { display: none; }
+/* אם קובץ התמונה חסר — חוזרים לציור המצויר */
+.card-art.img-failed .mon-img,
+.edit-art.img-failed .mon-img { display: none; }
+.card-art.has-img.img-failed .mon,
+.edit-art.has-img.img-failed .mon { display: block; }
+
+/* הצללה עדינה בתחתית התמונה כדי שהשם מתחת יישאר קריא */
+.card-art.has-img::after {
+    content: '';
+    position: absolute; inset-inline: 0; bottom: 0; height: 38%;
+    background: linear-gradient(to top, rgba(12,13,16,.85), transparent);
+    pointer-events: none;
+}
+.card-art.has-img.img-failed::after { display: none; }
+.card-art .power-badge { z-index: 2; }
+
 .power-badge {
     position: absolute; top: 5px; inset-inline-start: 5px;
     min-width: 28px; height: 28px;
@@ -609,7 +637,7 @@ button, [role="button"], .clickable { touch-action: manipulation; }
     background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--el) 32%, transparent), transparent 70%), var(--surface-2);
 }
 .edit-art .mon { width: 94%; height: 94%; }
-.edit-art .power-badge { top: 2px; inset-inline-start: 2px; min-width: 20px; height: 20px; font-size: 12px; border-radius: 7px; }
+.edit-art .power-badge { top: 2px; inset-inline-start: 2px; min-width: 20px; height: 20px; font-size: 12px; border-radius: 7px; z-index: 2; }
 
 .edit-info { flex: 1; min-width: 0; }
 .edit-name { font-family: var(--font-display); font-weight: 700; font-size: 15px; color: var(--text-dark); }
