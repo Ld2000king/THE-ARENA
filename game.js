@@ -552,7 +552,9 @@ function buildLegend() {
 document.addEventListener('DOMContentLoaded', () => {
     S.counts = loadCounts();
 
-    $('crest').innerHTML = monsterSVG(CARD_POOL[0].art);
+    // לוגו המשחק; אם הקובץ חסר נופלים חזרה למפלצת המצוירת
+    $('crest').innerHTML = `<img class="crest-img" src="art/logo.jpg" alt="הזירה"
+        onerror="this.remove(); document.getElementById('crest').innerHTML = monsterSVG(CARD_POOL[0].art);">`;
     $('enemyAvatar').innerHTML = monsterSVG({ body: 'spiky', c1: '#B3372E', c2: '#F0C24A', eyes: 2, eyeStyle: 'angry', horns: 'twin', mouth: 'fangs', extra: 'none', front: 'none' });
     $('meAvatar').innerHTML = monsterSVG({ body: 'blob', c1: '#3A65B8', c2: '#BFE4FF', eyes: 2, eyeStyle: 'glow', horns: 'ears', mouth: 'grin', extra: 'none', front: 'none' });
 
