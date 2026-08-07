@@ -17,26 +17,58 @@
 
 <div id="app">
 
-    <!-- ==================== מסך הבית ==================== -->
-    <section id="homeScreen" class="screen active">
-        <div class="home-content">
-            <div class="crest" id="crest"></div>
-            <h1 class="main-title">הזירה</h1>
-            <p class="tagline">קרב מפלצות · הכוח הגבוה מנצח</p>
-
-            <div class="home-actions">
-                <button class="mega-btn primary-cta" id="btnCampaign">מפת השלבים</button>
-                <button class="mega-btn btn-orange" id="btnPlay">קרב מהיר</button>
-                <button class="mega-btn btn-blue" id="btnEdit">ערוך חפיסה</button>
-                <button class="mega-btn btn-purple" id="btnCodex">אוסף המפלצות</button>
-                <button class="mega-btn btn-ghost" id="btnRules">חוקי המשחק</button>
+    <!-- ==================== בחירת שם ==================== -->
+    <section id="nameScreen" class="screen">
+        <div class="name-wrap">
+            <div class="crest small" id="nameCrest">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#8B7BE8" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 7h16v13H4z"/><path d="M4 11h16"/><path d="M9 4l3 3 3-3"/>
+                </svg>
             </div>
-
-            <div class="home-foot">20 קלפים בחפיסה · 20 מפלצות · 9 יכולות</div>
+            <h2 class="sheet-title" id="nameTitle">ברוכים הבאים לזירה</h2>
+            <p class="name-sub" id="nameSub">בחרו שם שחקן כדי להתחיל</p>
+            <input id="nameInput" class="name-input" type="text" maxlength="16"
+                   placeholder="שם השחקן" autocomplete="off" spellcheck="false">
+            <button class="mega-btn primary-cta" id="btnNameSave">שמור והמשך</button>
+            <button class="mega-btn btn-ghost" id="btnNameSkip">ביטול</button>
         </div>
     </section>
 
-    <!-- ==================== מסך המשחק ==================== -->
+    <!-- ==================== מסך הבית ==================== -->
+    <section id="homeScreen" class="screen active">
+        <div class="home-content">
+            <div class="top-hud">
+                <button class="profile-chip" id="profileChip">
+                    <span class="player-name-val">אורח</span>
+                    <span class="admin-badge" id="adminBadge">אדמין</span>
+                </button>
+                <div class="cur-chip"><span class="coin-ico"></span><span class="coin-val">0</span></div>
+                <div class="cur-chip"><span class="gem-ico"></span><span class="gem-val">0</span></div>
+            </div>
+
+            <div class="crest" id="crest"></div>
+            <h1 class="main-title">הזירה</h1>
+            <p class="tagline">קרב מפלצות · 20 חיים · הפרש הכוח הוא הנזק</p>
+
+            <div class="home-actions">
+                <button class="mega-btn primary-cta" id="btnCampaign">מפת השלבים</button>
+                <div class="btn-row">
+                    <button class="mega-btn btn-gold" id="btnShop">חנות</button>
+                    <button class="mega-btn btn-purple" id="btnChests">תיבות</button>
+                </div>
+                <div class="btn-row">
+                    <button class="mega-btn btn-blue" id="btnEdit">ערוך חפיסה</button>
+                    <button class="mega-btn btn-orange" id="btnPlay">קרב מהיר</button>
+                </div>
+                <div class="btn-row">
+                    <button class="mega-btn btn-ghost" id="btnCodex">אוסף</button>
+                    <button class="mega-btn btn-ghost" id="btnRules">חוקים</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== מסך הקרב ==================== -->
     <section id="gameScreen" class="screen">
         <header class="top-bar">
             <button class="icon-btn btn-red-soft" id="btnQuit" aria-label="יציאה">
@@ -46,49 +78,48 @@
             <span style="width:40px"></span>
         </header>
 
-        <!-- יריב -->
         <div class="player-strip enemy">
             <div class="avatar enemy-avatar" id="enemyAvatar"></div>
             <div class="strip-text">
                 <span class="strip-name" id="enemyName">היריב</span>
                 <div class="deck-bar"><i id="enemyBar"></i></div>
             </div>
-            <div class="deck-count" id="enemyCount">20</div>
+            <div class="hp-box">
+                <div class="deck-count" id="enemyCount">20</div>
+                <div class="cards-left"><span id="enemyCards">15</span> קלפים</div>
+            </div>
         </div>
 
-        <!-- הזירה -->
         <div class="arena">
             <div class="war-banner" id="warBanner"><span>מצב מלחמה</span></div>
-
             <div class="lane">
                 <div class="slot" id="enemySlot"></div>
                 <div class="power-readout" id="enemyPower"></div>
             </div>
-
             <div class="center-col">
                 <div class="vs-badge" id="vsBadge">VS</div>
             </div>
-
             <div class="lane">
                 <div class="slot" id="playerSlot"></div>
                 <div class="power-readout" id="playerPower"></div>
             </div>
         </div>
 
-        <!-- הודעת הסיבוב -->
         <div class="verdict" id="verdict">
             <div class="verdict-title" id="verdictTitle">מוכנים?</div>
             <div class="verdict-sub" id="verdictSub">לחצו "שלוף" כדי לחשוף קלפים</div>
         </div>
 
-        <!-- שחקן -->
         <div class="player-strip me">
             <div class="avatar me-avatar" id="meAvatar"></div>
             <div class="strip-text">
-                <span class="strip-name">אתם</span>
+                <span class="strip-name" id="playerNameLabel">אתם</span>
                 <div class="deck-bar"><i id="playerBar"></i></div>
             </div>
-            <div class="deck-count" id="playerCount">20</div>
+            <div class="hp-box">
+                <div class="deck-count" id="playerCount">20</div>
+                <div class="cards-left"><span id="playerCards">15</span> קלפים</div>
+            </div>
         </div>
 
         <div class="draw-dock">
@@ -103,9 +134,36 @@
                 <svg viewBox="0 0 24 24"><path d="M6 6 L18 18 M18 6 L6 18"/></svg>
             </button>
             <div class="round-chip">מפת השלבים</div>
-            <div class="progress-chip"><span id="progressLabel">0/10</span></div>
+            <div class="progress-chip"><span id="progressLabel">0/20</span></div>
         </header>
         <div class="stage-list" id="stageList"></div>
+    </section>
+
+    <!-- ==================== החנות ==================== -->
+    <section id="shopScreen" class="screen">
+        <header class="top-bar">
+            <button class="icon-btn btn-red-soft" id="btnShopBack" aria-label="חזרה">
+                <svg viewBox="0 0 24 24"><path d="M6 6 L18 18 M18 6 L6 18"/></svg>
+            </button>
+            <div class="round-chip">חנות הקלפים</div>
+            <div class="cur-chip"><span class="coin-ico"></span><span class="coin-val">0</span></div>
+        </header>
+        <p class="screen-hint">עד 3 עותקים מכל קלף. ככל שהקלף נדיר יותר — המחיר גבוה יותר.</p>
+        <div class="shop-grid" id="shopGrid"></div>
+    </section>
+
+    <!-- ==================== תיבות ==================== -->
+    <section id="chestScreen" class="screen">
+        <header class="top-bar">
+            <button class="icon-btn btn-red-soft" id="btnChestBack" aria-label="חזרה">
+                <svg viewBox="0 0 24 24"><path d="M6 6 L18 18 M18 6 L6 18"/></svg>
+            </button>
+            <div class="round-chip">תיבות</div>
+            <div class="cur-chip"><span class="gem-ico"></span><span class="gem-val">0</span></div>
+        </header>
+        <p class="screen-hint">4 תאים. תיבה טובה יותר לוקחת יותר זמן להיפתח — אפשר לדלג ביהלומים.</p>
+        <div class="chest-grid" id="chestGrid"></div>
+        <div class="chest-legend" id="chestLegend"></div>
     </section>
 
     <!-- ==================== עריכת החפיסה ==================== -->
@@ -122,17 +180,17 @@
 
         <div class="deck-meter">
             <div class="meter-head">
-                <span id="deckCountLabel">20 / 20 קלפים</span>
-                <span id="deckPowerLabel">כוח כולל 115</span>
+                <span id="deckCountLabel">15 / 15 קלפים</span>
+                <span id="deckPowerLabel">כוח כולל 0</span>
             </div>
             <div class="deck-bar big"><i id="deckMeterBar"></i></div>
-            <p class="meter-hint">עד 3 עותקים מכל מפלצת. היריב יבנה חפיסה בעוצמה דומה לשלכם.</p>
+            <p class="meter-hint">מוצגים רק קלפים שבבעלותכם. קלפים נוספים אפשר לקנות בחנות או לזכות בתיבות.</p>
         </div>
 
         <div class="edit-list" id="editList"></div>
 
         <div class="draw-dock">
-            <button class="mega-btn primary-cta" id="btnSaveDeck">שמור והתחל קרב</button>
+            <button class="mega-btn primary-cta" id="btnSaveDeck">שמור חפיסה</button>
         </div>
     </section>
 
@@ -153,13 +211,15 @@
         <div class="sheet">
             <h2 class="sheet-title">חוקי הזירה</h2>
             <ol class="rules-list">
-                <li>לכל צד חפיסה של <b>20 קלפי מפלצות</b>.</li>
+                <li>לכל צד חפיסה של <b>15 קלפים</b> ו<b>20 נקודות חיים</b>.</li>
                 <li>בכל סיבוב לוחצים <b>"שלוף!"</b> ושני הקלפים העליונים נחשפים.</li>
-                <li>הקלף עם <b>רמת הכוח הגבוהה</b> מנצח וחוזר לתחתית החפיסה של בעליו.</li>
-                <li>הקלף המפסיד <b>מודח מהזירה לצמיתות</b> — כל הפסד מקטין לכם את החפיסה.</li>
-                <li>לכל קלף יש <b>יכולת מיוחדת</b> שמשנה את הכוח או את תוצאת הסיבוב.</li>
-                <li>בתיקו נכנסים ל<b>מצב מלחמה</b>: כל צד מניח 2 קלפים הפוכים מהחפיסה, ואז נשלף קלף שלישי מכריע. המנצח לוקח את <b>כל הערימה</b> לחפיסה שלו.</li>
-                <li>המשחק נגמר כשלאחד הצדדים <b>נגמרו הקלפים</b>.</li>
+                <li>הקלף עם <b>רמת הכוח הגבוהה</b> מנצח את הסיבוב.</li>
+                <li>המפסיד סופג נזק ב<b>גובה ההפרש</b> בין הקלף המנצח למפסיד.</li>
+                <li>לכל קלף <b>יכולת מיוחדת</b> שמשנה את הכוח, את הנזק או את תוצאת הסיבוב.</li>
+                <li>בתיקו נכנסים ל<b>מצב מלחמה</b>: כל צד מניח 2 קלפים הפוכים, ואז נשלף קלף שלישי מכריע — והנזק <b>כפול</b>.</li>
+                <li>הקרב נגמר כשלאחד הצדדים <b>נגמרו נקודות החיים</b>.</li>
+                <li>כל ניצחון מזכה ב-<b>10 מטבעות</b>, וסיום ראשון של שלב ב-<b>50 מטבעות ו-2 יהלומים</b>.</li>
+                <li>במטבעות קונים בחנות קלפים חדשים — עד 3 עותקים מכל קלף.</li>
             </ol>
             <div class="ability-legend" id="abilityLegend"></div>
             <button class="mega-btn btn-ghost close-overlay">הבנתי</button>
@@ -175,13 +235,25 @@
             <button class="mega-btn primary-cta" id="btnNextStage">לשלב הבא</button>
             <button class="mega-btn btn-blue" id="btnResultEdit">חזקו את החפיסה</button>
             <button class="mega-btn btn-orange" id="btnRematch">קרב חוזר</button>
-            <button class="mega-btn btn-ghost" id="btnHome">חזרה למסך הבית</button>
+            <button class="mega-btn btn-ghost" id="btnHome">חזרה</button>
         </div>
     </div>
+
+    <div class="overlay" id="rewardOverlay">
+        <div class="sheet">
+            <h2 class="sheet-title" id="rewardTitle">התיבה נפתחה!</h2>
+            <div class="reward-grid" id="rewardCards"></div>
+            <div class="reward-currency" id="rewardCurrency"></div>
+            <button class="mega-btn primary-cta" id="btnRewardClose">אסוף</button>
+        </div>
+    </div>
+
+    <div id="toast"></div>
 
 </div>
 
 <script src="monsters.js"></script>
+<script src="economy.js"></script>
 <script src="game.js"></script>
 </body>
 </html>

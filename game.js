@@ -1,32 +1,26 @@
 /* ============================================================================
-   הזירה — לוגיקת המשחק
+   הזירה — לוגיקת המשחק, המסכים והכלכלה
+   טעינה: monsters.js -> economy.js -> game.js
    ============================================================================ */
 
 const $ = id => document.getElementById(id);
+const rnd = arr => arr[Math.floor(Math.random() * arr.length)];
 
-const DECK_SIZE = 20;
-const MAX_COPIES = 3;
-const STORE_KEY = 'zira-deck-v1';
-const PROGRESS_KEY = 'zira-progress-v1';
+let P = null;   // פרופיל השחקן (נטען ב-DOMContentLoaded)
 
 const S = {
-    playerDeck: [],
-    enemyDeck: [],
+    playerDeck: [], enemyDeck: [],
+    playerDiscard: [], enemyDiscard: [],
+    playerHP: START_HP, enemyHP: START_HP, enemyMaxHP: START_HP,
     round: 1,
     busy: false,
-    knockouts: 0,
-    war: null,                 // { pileP: [], pileE: [], depth: 1 } כשמצב מלחמה פעיל
-    counts: {},                // תצורת החפיסה של השחקן: { cardId: copies }
-    mode: 'quick',             // 'quick' = קרב מהיר, 'campaign' = שלב במפה
-    stageIdx: null,            // אינדקס השלב כשמשחקים במפה
-    cleared: 0,                // מספר השלבים שהושלמו
-    stats: { wins: 0, losses: 0, wars: 0 }
+    war: null,
+    mode: 'quick',          // 'quick' | 'campaign'
+    stageIdx: null,
+    stats: { wins: 0, losses: 0, wars: 0, dealt: 0, taken: 0 }
 };
 
 /* ---------------- עזרים ---------------- */
-
-const byId = id => CARD_POOL.find(c => c.id === id);
-const rnd = arr => arr[Math.floor(Math.random() * arr.length)];
 
 function shuffle(arr) {
     const a = arr.slice();
@@ -37,57 +31,19 @@ function shuffle(arr) {
     return a;
 }
 
-function countsTotal(counts) {
-    return Object.values(counts).reduce((a, b) => a + b, 0);
-}
-
 function countsPower(counts) {
-    return Object.entries(counts).reduce((sum, [id, n]) => sum + byId(+id).power * n, 0);
+    return Object.entries(counts).reduce((sum, [id, n]) => sum + byId(id).power * n, 0);
 }
 
-function defaultCounts() {
-    const c = {};
-    CARD_POOL.forEach(card => { c[card.id] = 1; });
-    return c;
-}
-
-function loadCounts() {
-    try {
-        const raw = JSON.parse(localStorage.getItem(STORE_KEY));
-        if (raw && countsTotal(raw) === DECK_SIZE) return raw;
-    } catch (e) { /* חפיסה שמורה לא תקינה — נשתמש בברירת המחדל */ }
-    return defaultCounts();
-}
-
-function saveCounts(counts) {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(counts)); } catch (e) { /* אין אחסון */ }
-}
-
-/* ---- התקדמות במפת השלבים ---- */
-function loadProgress() {
-    try {
-        const n = parseInt(localStorage.getItem(PROGRESS_KEY), 10);
-        if (Number.isFinite(n) && n >= 0) return Math.min(n, STAGES.length);
-    } catch (e) { /* אין אחסון */ }
-    return 0;
-}
-
-function saveProgress(n) {
-    try { localStorage.setItem(PROGRESS_KEY, String(n)); } catch (e) { /* אין אחסון */ }
-}
-
-/* בונה חפיסה מעורבבת מתוך תצורת עותקים */
 function deckFromCounts(counts, owner) {
     const cards = [];
     Object.entries(counts).forEach(([id, n]) => {
-        for (let i = 0; i < n; i++) {
-            cards.push({ ...byId(+id), uid: `${owner}-${id}-${i}` });
-        }
+        for (let i = 0; i < n; i++) cards.push({ ...byId(id), uid: `${owner}-${id}-${i}` });
     });
     return shuffle(cards);
 }
 
-/* חפיסת יריב אקראית וחוקית, בעוצמה קרובה לזו של השחקן */
+/* חפיסת יריב אקראית וחוקית בעוצמה קרובה לשחקן — לקרב מהיר */
 function enemyCounts(targetPower) {
     const ids = CARD_POOL.map(c => c.id);
     const counts = {};
@@ -96,14 +52,13 @@ function enemyCounts(targetPower) {
         const id = rnd(ids);
         if ((counts[id] || 0) < MAX_COPIES) { counts[id] = (counts[id] || 0) + 1; placed++; }
     }
-    // תיקון הדרגתי לכיוון עוצמת היעד — החלפת קלף בקלף חזק/חלש יותר
     for (let i = 0; i < 3000; i++) {
         const diff = countsPower(counts) - targetPower;
         if (Math.abs(diff) <= 2) break;
         const stronger = diff < 0;
         const from = rnd(Object.keys(counts).filter(id => counts[id] > 0));
         const options = ids.filter(id => (counts[id] || 0) < MAX_COPIES &&
-            (stronger ? byId(id).power > byId(+from).power : byId(id).power < byId(+from).power));
+            (stronger ? byId(id).power > byId(from).power : byId(id).power < byId(from).power));
         if (!options.length) continue;
         const to = rnd(options);
         if (--counts[from] === 0) delete counts[from];
@@ -122,8 +77,6 @@ function abilityChip(key) {
     </div>`;
 }
 
-/* ציור הקלף: תמונה אם הוגדרה, אחרת המפלצת המצוירת.
-   אם קובץ התמונה חסר — onerror מסמן את המסגרת ונופלים חזרה לציור. */
 function artHTML(card) {
     if (!card.img) return monsterSVG(card.art);
     const pos = card.imgPos || 'center 25%';
@@ -136,16 +89,17 @@ function artHTML(card) {
         ${monsterSVG(card.art)}`;
 }
 
-/* נופלים חזרה למפלצת המצוירת כשקובץ התמונה חסר או פגום */
 function markArtFailed(img) {
     const box = img.closest('.card-art, .edit-art');
     if (box) box.classList.add('img-failed');
 }
 
 function cardFrontHTML(card) {
-    return `<div class="card-face card-front el-${card.el}">
+    const rar = rarityOf(card);
+    return `<div class="card-face card-front el-${card.el} rar-${rar}">
         <div class="card-art${card.img ? ' has-img' : ''}">
             <div class="power-badge">${card.power}</div>
+            <div class="rar-badge rar-${rar}">${RARITIES[rar].name}</div>
             ${artHTML(card)}
         </div>
         <div class="card-name">${card.name}</div>
@@ -161,7 +115,6 @@ const SIGIL = `<svg class="sigil" viewBox="0 0 100 100">
 
 const backHTML = () => `<div class="card-face card-back">${SIGIL}</div>`;
 
-/* שכבת קלף בערימה. index קובע את ההיסט הוויזואלי */
 function layerHTML(card, index, faceUp) {
     return `<div class="card-layer" style="--i:${index}">
         <div class="card${faceUp ? ' flipped' : ''}">
@@ -171,19 +124,17 @@ function layerHTML(card, index, faceUp) {
     </div>`;
 }
 
-/* ---------------- חישוב הקרב ---------------- */
+/* ---------------- חישוב הסיבוב ---------------- */
 
 function resolveRound(pCard, eCard) {
     const notes = [];
 
-    // "מבטל" מנטרל את יכולת היריב
     let pAb = pCard.ability, eAb = eCard.ability;
     if (eAb === 'nullify' && pAb !== 'none') { pAb = 'none'; notes.push(`${eCard.name} ביטל את היכולת שלכם`); }
     if (pCard.ability === 'nullify' && eAb !== 'none') { eAb = 'none'; notes.push(`${pCard.name} ביטל את יכולת היריב`); }
 
     let pPow = pCard.power, ePow = eCard.power;
 
-    // "נועז" — נמדד מול הכוח הבסיסי
     if (pAb === 'underdog' && pCard.power < eCard.power) { pPow += 4; notes.push(`${pCard.name} נועז: +4`); }
     if (eAb === 'underdog' && eCard.power < pCard.power) { ePow += 4; notes.push(`${eCard.name} נועז: +4`); }
 
@@ -212,13 +163,42 @@ function resolveRound(pCard, eCard) {
     return { pPow, ePow, pAb, eAb, outcome, notes };
 }
 
-/* ---------------- תצוגה ---------------- */
+/* ---------------- תצוגת הקרב ---------------- */
+
+/* שולף קלף. כשהחפיסה נגמרת מערבבים את ערימת ההשלכה וממשיכים.
+   מחזיר null רק אם גם החפיסה וגם ההשלכה ריקות — מצב שקורה כשמלחמה
+   ארוכה מחזיקה את כל הקלפים בערימה שעל השולחן. */
+function drawCard(side) {
+    const deck = side === 'p' ? S.playerDeck : S.enemyDeck;
+    const disc = side === 'p' ? S.playerDiscard : S.enemyDiscard;
+    if (!deck.length && disc.length) {
+        deck.push(...shuffle(disc));
+        disc.length = 0;
+    }
+    return deck.length ? deck.shift() : null;
+}
+
+/* אף צד לא יכול להמשיך — מכריעים לפי נקודות החיים */
+function endByHP() {
+    if (S.playerHP === S.enemyHP) S.enemyHP -= 1;   // שובר שוויון לטובת השחקן
+    if (S.playerHP > S.enemyHP) S.enemyHP = 0; else S.playerHP = 0;
+    S.war = null;
+    $('warBanner').classList.remove('on');
+    setVerdict('הקלפים אזלו', 'שני הצדדים נשארו בלי קלפים — ההכרעה לפי נקודות החיים', '');
+    endGame();
+}
 
 function updateBars(anim) {
-    $('playerCount').textContent = S.playerDeck.length;
-    $('enemyCount').textContent = S.enemyDeck.length;
-    $('playerBar').style.width = Math.min(100, (S.playerDeck.length / DECK_SIZE) * 100) + '%';
-    $('enemyBar').style.width = Math.min(100, (S.enemyDeck.length / DECK_SIZE) * 100) + '%';
+    const pPct = Math.max(0, (S.playerHP / START_HP) * 100);
+    const ePct = Math.max(0, (S.enemyHP / S.enemyMaxHP) * 100);
+    $('playerCount').textContent = Math.max(0, S.playerHP);
+    $('enemyCount').textContent = Math.max(0, S.enemyHP);
+    $('playerBar').style.width = pPct + '%';
+    $('enemyBar').style.width = ePct + '%';
+    $('playerBar').classList.toggle('low', pPct <= 30);
+    $('enemyBar').classList.toggle('low', ePct <= 30);
+    $('playerCards').textContent = S.playerDeck.length;
+    $('enemyCards').textContent = S.enemyDeck.length;
     if (anim) {
         ['playerCount', 'enemyCount'].forEach(id => {
             const el = $(id);
@@ -247,6 +227,16 @@ function setDrawButton(label, war) {
     b.disabled = false;
 }
 
+/* מציג מספר נזק צף מעל הצד שנפגע */
+function floatDamage(side, amount, kind) {
+    const host = side === 'p' ? $('playerSlot') : $('enemySlot');
+    const el = document.createElement('div');
+    el.className = 'dmg-float ' + (kind || 'dmg');
+    el.textContent = (kind === 'heal' ? '+' : '−') + amount;
+    host.appendChild(el);
+    setTimeout(() => el.remove(), 1100);
+}
+
 /* ---------------- מהלך הסיבוב ---------------- */
 
 function drawRound() {
@@ -256,8 +246,9 @@ function drawRound() {
     S.busy = true;
     $('btnDraw').disabled = true;
 
-    const pCard = S.playerDeck.shift();
-    const eCard = S.enemyDeck.shift();
+    const pCard = drawCard('p');
+    const eCard = drawCard('e');
+    if (!pCard || !eCard) { endByHP(); return; }
 
     $('playerSlot').innerHTML = layerHTML(pCard, 0, false);
     $('enemySlot').innerHTML = layerHTML(eCard, 0, false);
@@ -286,53 +277,69 @@ function finishRound(pCard, eCard) {
 
     const notes = r.notes.length ? r.notes.join(' · ') : 'קרב כוח נקי, בלי יכולות';
 
-    if (r.outcome === 'tie') {
-        startWar(pCard, eCard, r, notes);
-        return;
-    }
+    if (r.outcome === 'tie') { startWar(pCard, eCard, r, notes); return; }
 
     const playerWon = r.outcome === 'player';
-    const winnerDeck = playerWon ? S.playerDeck : S.enemyDeck;
-    const loserDeck = playerWon ? S.enemyDeck : S.playerDeck;
-    const winCard = playerWon ? pCard : eCard;
-    const loseCard = playerWon ? eCard : pCard;
     const winAb = playerWon ? r.pAb : r.eAb;
     const loseAb = playerWon ? r.eAb : r.pAb;
+    const winCard = playerWon ? pCard : eCard;
 
     (playerWon ? pTop : eTop).classList.add('winner');
     (playerWon ? eTop : pTop).classList.add('loser');
     $('vsBadge').className = 'vs-badge ' + (playerWon ? 'win' : 'lose');
     $('vsBadge').textContent = playerWon ? '▲' : '▼';
 
+    // ---- נזק = ההפרש בין הקלף המנצח למפסיד ----
+    // מינימום 1: ניצחון ביכולת "עקשן" קורה בהפרש 0, ובלי רצפה הקרב לא היה מתקדם
+    let dmg = Math.max(1, Math.abs(r.pPow - r.ePow));
     const extra = [];
 
-    if (S.war) {
-        // הכרעת מלחמה — המנצח לוקח את כל הערימה משני הצדדים
-        const spoils = [...S.war.pileP, ...S.war.pileE, winCard, loseCard];
-        winnerDeck.push(...shuffle(spoils));
-        extra.push(`לקח את כל ${spoils.length} הקלפים שבערימה`);
-        S.war = null;
-        $('warBanner').classList.remove('on');
-    } else {
-        // סיבוב רגיל — המנצח חוזר לחפיסה, המפסיד מודח
-        winnerDeck.push(winCard);
-        if (loseAb === 'shield') {
-            loserDeck.push(loseCard);
-            extra.push(`${loseCard.name} הגן על עצמו ושרד`);
-        } else {
-            S.knockouts++;
-            extra.push(`${loseCard.name} הודח מהזירה`);
-        }
-        if (winAb === 'steal' && loserDeck.length > 0) {
-            winnerDeck.push(loserDeck.shift());
-            extra.push(`${winCard.name} גנב קלף נוסף`);
-        }
+    const wasWar = !!S.war;
+    if (wasWar) {
+        dmg *= 2;
+        extra.push('הכרעת מלחמה — נזק כפול');
+    }
+    if (winAb === 'steal') { dmg += 2; extra.push(`${winCard.name} גנב: 2+ נזק`); }
+    if (loseAb === 'shield') {
+        const before = dmg;
+        dmg = Math.max(0, dmg - 3);
+        if (before !== dmg) extra.push('מגן: 3 נזק נבלמו');
     }
 
-    if (playerWon) S.stats.wins++; else S.stats.losses++;
+    if (playerWon) {
+        S.enemyHP -= dmg; S.stats.dealt += dmg;
+        floatDamage('e', dmg, 'dmg');
+        if (winAb === 'vampire' && S.playerHP < START_HP) {
+            const heal = Math.min(2, START_HP - S.playerHP);
+            S.playerHP += heal;
+            floatDamage('p', heal, 'heal');
+            extra.push(`${winCard.name} ריפא ${heal} חיים`);
+        }
+        S.stats.wins++;
+    } else {
+        S.playerHP -= dmg; S.stats.taken += dmg;
+        floatDamage('p', dmg, 'dmg');
+        if (winAb === 'vampire' && S.enemyHP < S.enemyMaxHP) {
+            const heal = Math.min(2, S.enemyMaxHP - S.enemyHP);
+            S.enemyHP += heal;
+            floatDamage('e', heal, 'heal');
+            extra.push(`${winCard.name} ריפא ליריב ${heal} חיים`);
+        }
+        S.stats.losses++;
+    }
+
+    // הקלפים ששוחקו עוברים לערימת ההשלכה ויחזרו אחרי ערבוב
+    S.playerDiscard.push(pCard);
+    S.enemyDiscard.push(eCard);
+    if (wasWar) {
+        S.playerDiscard.push(...S.war.pileP);
+        S.enemyDiscard.push(...S.war.pileE);
+        S.war = null;
+        $('warBanner').classList.remove('on');
+    }
 
     setVerdict(
-        playerWon ? 'ניצחתם בסיבוב!' : 'היריב לקח את הסיבוב',
+        playerWon ? `פגעתם! ${dmg} נזק` : `ספגתם ${dmg} נזק`,
         `${r.pPow} מול ${r.ePow}<br>${[notes, ...extra].join(' · ')}`,
         playerWon ? 'win' : 'lose'
     );
@@ -347,20 +354,18 @@ function endRound() {
     $('btnDraw').disabled = true;
 
     setTimeout(() => {
-        if (S.playerDeck.length === 0 || S.enemyDeck.length === 0) endGame();
+        if (S.playerHP <= 0 || S.enemyHP <= 0) endGame();
         else { S.busy = false; $('btnDraw').disabled = false; }
-    }, 700);
+    }, 750);
 }
 
 /* ---------------- מצב מלחמה ---------------- */
 
 function startWar(pCard, eCard, r, notes) {
-    const first = !S.war;
-    if (first) S.war = { pileP: [], pileE: [], depth: 0 };
+    if (!S.war) S.war = { pileP: [], pileE: [], depth: 0 };
     S.war.depth++;
     S.stats.wars++;
 
-    // הקלפים שהתקבלו בתיקו נשארים בערימה
     S.war.pileP.push(pCard);
     S.war.pileE.push(eCard);
 
@@ -370,18 +375,16 @@ function startWar(pCard, eCard, r, notes) {
     $('playerSlot').lastElementChild.classList.add('shake');
     $('enemySlot').lastElementChild.classList.add('shake');
 
-    // כל צד מניח עד 2 קלפים הפוכים מעל הקלף הנוכחי
     const dealt = { p: 0, e: 0 };
     for (let i = 0; i < 2; i++) {
-        if (S.playerDeck.length > 0) { S.war.pileP.push(S.playerDeck.shift()); dealt.p++; }
-        if (S.enemyDeck.length > 0) { S.war.pileE.push(S.enemyDeck.shift()); dealt.e++; }
+        const pc = drawCard('p'); if (pc) { S.war.pileP.push(pc); dealt.p++; }
+        const ec = drawCard('e'); if (ec) { S.war.pileE.push(ec); dealt.e++; }
     }
 
     setVerdict('מצב מלחמה!',
-        `${r.pPow} מול ${r.ePow} — תיקו. ${notes}<br>כל צד הניח ${Math.max(dealt.p, dealt.e)} קלפים הפוכים. הקלף השלישי מכריע — המנצח לוקח הכול.`,
+        `${r.pPow} מול ${r.ePow} — תיקו. ${notes}<br>כל צד הניח ${Math.max(dealt.p, dealt.e)} קלפים הפוכים. הקלף השלישי מכריע, והנזק כפול.`,
         'tie');
 
-    // אנימציית הנחה של הקלפים ההפוכים
     let step = 0;
     const dealNext = () => {
         step++;
@@ -393,7 +396,7 @@ function startWar(pCard, eCard, r, notes) {
             updateBars(true);
             return;
         }
-        const base = S.war.pileP.length - dealt.p - 1 + step;   // מיקום השכבה בערימה
+        const base = S.war.pileP.length - dealt.p - 1 + step;
         if (step <= dealt.p) $('playerSlot').insertAdjacentHTML('beforeend', layerHTML(null, base, false));
         if (step <= dealt.e) $('enemySlot').insertAdjacentHTML('beforeend', layerHTML(null, base, false));
         setTimeout(dealNext, 240);
@@ -403,19 +406,17 @@ function startWar(pCard, eCard, r, notes) {
 
 function warDecider() {
     if (S.busy) return;
-    // אם לצד כלשהו אין קלף להכרעה — המשחק נגמר
-    if (S.playerDeck.length === 0 || S.enemyDeck.length === 0) { endGame(); return; }
-
     S.busy = true;
     $('btnDraw').disabled = true;
 
-    const pCard = S.playerDeck.shift();
-    const eCard = S.enemyDeck.shift();
+    const pCard = drawCard('p');
+    const eCard = drawCard('e');
+    if (!pCard || !eCard) { endByHP(); return; }
     const idx = Math.max(S.war.pileP.length, S.war.pileE.length);
 
     $('playerSlot').insertAdjacentHTML('beforeend', layerHTML(pCard, idx, false));
     $('enemySlot').insertAdjacentHTML('beforeend', layerHTML(eCard, idx, false));
-    setVerdict('הכרעה!', 'הקלף המכריע נחשף', 'tie');
+    setVerdict('הכרעה!', 'הקלף המכריע נחשף — הנזק יהיה כפול', 'tie');
     updateBars(false);
 
     setTimeout(() => {
@@ -426,7 +427,7 @@ function warDecider() {
     setTimeout(() => finishRound(pCard, eCard), 880);
 }
 
-/* ---------------- סוף משחק ---------------- */
+/* ---------------- סוף קרב ---------------- */
 
 const TROPHY = `<svg viewBox="0 0 24 24" fill="none" stroke="#4ED89B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
     <path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/>
@@ -436,18 +437,39 @@ const SKULL = `<svg viewBox="0 0 24 24" fill="none" stroke="#F0928A" stroke-widt
     <circle cx="9" cy="11" r="1.8"/><circle cx="15" cy="11" r="1.8"/><path d="M11 16h2"/></svg>`;
 
 function endGame() {
-    const playerWon = S.playerDeck.length > 0;
+    const playerWon = S.enemyHP <= 0 && S.playerHP > 0;
     S.war = null;
     $('warBanner').classList.remove('on');
 
     const stage = S.mode === 'campaign' ? STAGES[S.stageIdx] : null;
-    let unlockedNext = false;
+    const rewards = [];
 
-    if (stage && playerWon && S.cleared < stage.n) {
-        S.cleared = stage.n;          // השלב הושלם — נפתח השלב הבא
-        saveProgress(S.cleared);
-        unlockedNext = true;
+    if (playerWon) {
+        P.wins++;
+        P.coins += COINS_PER_WIN;
+        rewards.push(`${COINS_PER_WIN} מטבעות`);
+
+        if (stage && P.cleared < stage.n) {
+            P.cleared = stage.n;
+            P.gems += 2;
+            P.coins += FIRST_CLEAR_COINS;
+            rewards.push(`${FIRST_CLEAR_COINS} מטבעות ו-2 יהלומים על סיום ראשון`);
+        }
+        // תיבה על ניצחון — רק אם יש מקום בין ארבעת התאים.
+        // גרסה ראשונה; תותאם למפרט של שלבים 4-6 (3 סוגים + שאלת "אין מקום")
+        const slot = P.chests.findIndex(c => !c);
+        if (slot >= 0) {
+            const type = chestForStage(stage ? stage.n : 1);
+            P.chests[slot] = { type, readyAt: chestReadyAt(type) };
+            rewards.push(CHEST_TYPES[type].name);
+        } else {
+            rewards.push('כל תאי התיבות מלאים');
+        }
+    } else {
+        P.losses++;
     }
+    saveProfile(P);
+    refreshCurrency();
 
     $('resultEmblem').className = 'result-emblem ' + (playerWon ? 'win' : 'lose');
     $('resultEmblem').innerHTML = playerWon ? TROPHY : SKULL;
@@ -461,27 +483,25 @@ function endGame() {
     const isLast = stage && stage.n === STAGES.length;
     let sub;
     if (stage && playerWon) {
-        sub = isLast
-            ? 'הבסתם את עריץ הזירה. סיימתם את כל 10 השלבים!'
-            : (unlockedNext ? `${stage.name} הובס. שלב ${stage.n + 1} נפתח.` : `${stage.name} הובס שוב.`);
+        sub = isLast ? `הבסתם את ${stage.name}. סיימתם את כל ${STAGES.length} השלבים!`
+                     : `${stage.name} הובס.`;
     } else if (stage) {
-        sub = `${stage.name} עוד חזק מדי. נסו לשנות את החפיסה ולחזור.`;
+        sub = `${stage.name} עוד חזק מדי. חזקו את החפיסה ונסו שוב.`;
     } else {
-        sub = playerWon ? 'ליריב נגמרו הקלפים. אתם שולטים בזירה.'
-                        : 'החפיסה שלכם התרוקנה. הזירה עברה ליריב.';
+        sub = playerWon ? 'היריב נפל. הזירה שלכם.' : 'נקודות החיים שלכם נגמרו.';
     }
-    $('resultSub').textContent = sub + ` ${S.knockouts} מפלצות הודחו לאורך ${S.round - 1} סיבובים.`;
+    if (playerWon && rewards.length) sub += ' זכיתם ב: ' + rewards.join(', ') + '.';
+    $('resultSub').textContent = sub;
 
-    // "לשלב הבא" מוצג רק כשיש שלב הבא שנפתח
+    $('resultStats').innerHTML = `
+        <div class="stat-tile"><div class="stat-val">${Math.max(0, S.playerHP)}</div><div class="stat-lbl">חיים שנותרו</div></div>
+        <div class="stat-tile"><div class="stat-val">${S.stats.dealt}</div><div class="stat-lbl">נזק שגרמתם</div></div>
+        <div class="stat-tile"><div class="stat-val">${S.stats.wars}</div><div class="stat-lbl">מצבי מלחמה</div></div>`;
+
     const hasNext = stage && playerWon && !isLast;
     $('btnNextStage').style.display = hasNext ? '' : 'none';
-    // אחרי הפסד בשלב — קיצור ישיר לעורך החפיסה, כי זו הדרך האמיתית להתקדם
     $('btnResultEdit').style.display = (stage && !playerWon) ? '' : 'none';
     $('btnRematch').textContent = stage ? 'שחקו שוב בשלב' : 'קרב חוזר';
-    $('resultStats').innerHTML = `
-        <div class="stat-tile"><div class="stat-val">${S.stats.wins}</div><div class="stat-lbl">סיבובים שניצחתם</div></div>
-        <div class="stat-tile"><div class="stat-val">${S.stats.losses}</div><div class="stat-lbl">סיבובים שהפסדתם</div></div>
-        <div class="stat-tile"><div class="stat-val">${S.stats.wars}</div><div class="stat-lbl">מצבי מלחמה</div></div>`;
     $('resultOverlay').classList.add('open');
     S.busy = false;
 }
@@ -493,26 +513,29 @@ function show(id) {
     $(id).classList.add('active');
 }
 
-/* stageIdx = אינדקס שלב במפה, או null לקרב מהיר */
 function startGame(stageIdx = null) {
     S.mode = stageIdx === null ? 'quick' : 'campaign';
     S.stageIdx = stageIdx;
     const stage = stageIdx === null ? null : STAGES[stageIdx];
 
-    S.playerDeck = deckFromCounts(S.counts, 'p');
-    S.enemyDeck = deckFromCounts(stage ? stage.deck : enemyCounts(countsPower(S.counts)), 'e');
+    S.playerDeck = deckFromCounts(P.deck, 'p');
+    S.enemyDeck = deckFromCounts(stage ? stage.deck : enemyCounts(countsPower(P.deck)), 'e');
+    S.playerDiscard = []; S.enemyDiscard = [];
 
-    // זהות היריב — שם ואווטאר לפי השלב, או יריב גנרי בקרב מהיר
-    $('enemyName').textContent = stage ? `${stage.n}. ${stage.name}` : 'היריב';
-    $('enemyAvatar').innerHTML = stage
-        ? `<img class="avatar-img" src="${stage.img}" alt="">`
-        : monsterSVG({ body: 'spiky', c1: '#B3372E', c2: '#F0C24A', eyes: 2, eyeStyle: 'angry', horns: 'twin', mouth: 'fangs', extra: 'none', front: 'none' });
+    S.playerHP = START_HP;
+    S.enemyMaxHP = stage ? stage.hp : START_HP;
+    S.enemyHP = S.enemyMaxHP;
 
     S.round = 1;
     S.busy = false;
     S.war = null;
-    S.knockouts = 0;
-    S.stats = { wins: 0, losses: 0, wars: 0 };
+    S.stats = { wins: 0, losses: 0, wars: 0, dealt: 0, taken: 0 };
+
+    $('enemyName').textContent = stage ? `${stage.n}. ${stage.name}` : 'היריב';
+    $('playerNameLabel').textContent = P.name || 'אתם';
+    $('enemyAvatar').innerHTML = stage
+        ? `<img class="avatar-img" src="${stage.img}" alt="">`
+        : monsterSVG({ body: 'spiky', c1: '#B3372E', c2: '#F0C24A', eyes: 2, eyeStyle: 'angry', horns: 'twin', mouth: 'fangs', extra: 'none', front: 'none' });
 
     $('roundNum').textContent = '1';
     $('playerSlot').innerHTML = layerHTML(null, 0, false);
@@ -524,7 +547,7 @@ function startGame(stageIdx = null) {
     $('warBanner').classList.remove('on');
     setDrawButton('שלוף!', false);
     setVerdict(stage ? `שלב ${stage.n} — ${stage.name}` : 'הזירה פתוחה',
-               stage ? stage.taunt : 'לחצו "שלוף!" כדי לחשוף את הקלפים העליונים', '');
+               stage ? stage.taunt : 'הפסד בסיבוב עולה לכם בהפרש הכוח בנקודות חיים', '');
     updateBars(false);
     $('resultOverlay').classList.remove('open');
     show('gameScreen');
@@ -537,14 +560,14 @@ const ICON_CHECK = `<svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>`;
 const ICON_PLAY = `<svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg>`;
 
 function deckPower(deck) {
-    return Object.entries(deck).reduce((sum, [id, n]) => sum + byId(+id).power * n, 0);
+    return Object.entries(deck).reduce((sum, [id, n]) => sum + byId(id).power * n, 0);
 }
 
 function buildMap() {
-    $('progressLabel').textContent = `${S.cleared}/${STAGES.length}`;
+    $('progressLabel').textContent = `${P.cleared}/${STAGES.length}`;
     $('stageList').innerHTML = STAGES.map((s, i) => {
-        const done = s.n <= S.cleared;
-        const open = s.n === S.cleared + 1;
+        const done = s.n <= P.cleared;
+        const open = s.n === P.cleared + 1;
         const state = done ? 'done' : (open ? 'open' : 'locked');
         const icon = done ? ICON_CHECK : (open ? ICON_PLAY : ICON_LOCK);
         return `<button class="stage-row ${state}" data-i="${i}" ${done || open ? '' : 'disabled'}>
@@ -553,7 +576,7 @@ function buildMap() {
             <div class="stage-info">
                 <div class="stage-name">${s.name}</div>
                 <div class="stage-title">${s.title}</div>
-                <div class="stage-power">כוח חפיסה ${deckPower(s.deck)}</div>
+                <div class="stage-power">כוח ${deckPower(s.deck)} · ${s.hp} חיים</div>
             </div>
             <div class="stage-state">${icon}</div>
         </button>`;
@@ -563,14 +586,195 @@ function buildMap() {
 function openMap() {
     buildMap();
     show('mapScreen');
-    // גוללים לשלב הפתוח כדי שלא יצטרכו לחפש אותו
     const next = $('stageList').querySelector('.stage-row.open');
     if (next) next.scrollIntoView({ block: 'center' });
 }
 
+/* ---------------- מטבעות ויהלומים ---------------- */
+
+function fmtCur(v) { return v === Infinity ? '∞' : v; }
+
+function refreshCurrency() {
+    document.querySelectorAll('.coin-val').forEach(e => e.textContent = fmtCur(coinsOf(P)));
+    document.querySelectorAll('.gem-val').forEach(e => e.textContent = fmtCur(gemsOf(P)));
+    document.querySelectorAll('.player-name-val').forEach(e => e.textContent = P.name || 'אורח');
+    $('adminBadge').style.display = isAdmin(P) ? '' : 'none';
+}
+
+/* ---------------- החנות ---------------- */
+
+function buildShop() {
+    const owned = ownedOf(P);
+    $('shopGrid').innerHTML = CARD_POOL.map(card => {
+        const rar = rarityOf(card);
+        const price = cardPrice(card);
+        const ownedN = owned[card.id] || 0;
+        const maxed = ownedN >= MAX_COPIES;
+        const afford = coinsOf(P) >= price;
+        const dis = maxed || !afford;
+        return `<div class="shop-item rar-${rar}">
+            <div class="shop-art el-${card.el}${card.img ? ' has-img' : ''}">
+                <div class="power-badge">${card.power}</div>
+                ${artHTML(card)}
+                ${ownedN ? `<div class="own-badge">×${ownedN}</div>` : ''}
+            </div>
+            <div class="shop-name">${card.name}</div>
+            <div class="shop-rar rar-${rar}">${RARITIES[rar].name}</div>
+            <button class="shop-buy${dis ? ' disabled' : ''}" data-id="${card.id}" ${dis ? 'disabled' : ''}>
+                ${maxed ? 'מלא (3)' : `<span class="coin-ico"></span>${price}`}
+            </button>
+        </div>`;
+    }).join('');
+}
+
+function buyCard(id) {
+    const card = byId(id);
+    const ownedN = ownedOf(P)[id] || 0;
+    if (ownedN >= MAX_COPIES) return toast('כבר יש לכם 3 עותקים מהקלף הזה');
+    const price = cardPrice(card);
+    if (!spendCoins(P, price)) return toast('אין מספיק מטבעות');
+    P.owned[id] = ownedN + 1;
+    saveProfile(P);
+    refreshCurrency();
+    buildShop();
+    toast(`${card.name} נוסף לאוסף`);
+}
+
+/* ---------------- תיבות ---------------- */
+
+let chestTimer = null;
+
+function fmtLeft(ms) {
+    if (ms <= 0) return 'מוכן';
+    const s = Math.ceil(ms / 1000);
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+    return `${m}:${String(sec).padStart(2, '0')}`;
+}
+
+const CHEST_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 10a9 9 0 0 1 18 0v9H3v-9Z"/><path d="M3 13h18"/><rect x="10" y="11" width="4" height="5" rx="1"/></svg>`;
+
+function buildChests() {
+    const now = Date.now();
+    $('chestGrid').innerHTML = P.chests.map((c, i) => {
+        if (!c) {
+            return `<div class="chest-slot empty">
+                <div class="chest-ico">${CHEST_SVG}</div>
+                <div class="chest-name">תא ריק</div>
+                <div class="chest-sub">נצחו קרב כדי לזכות בתיבה</div>
+            </div>`;
+        }
+        const t = CHEST_TYPES[c.type];
+        const left = c.readyAt - now;
+        const ready = left <= 0;
+        const cost = ready ? 0 : skipCost(left);
+        return `<div class="chest-slot el-${t.el}${ready ? ' ready' : ''}" data-i="${i}">
+            <div class="chest-ico">${CHEST_SVG}</div>
+            <div class="chest-name">${t.name}</div>
+            <div class="chest-sub timer" data-i="${i}">${ready ? 'מוכן לפתיחה' : fmtLeft(left)}</div>
+            ${ready
+                ? `<button class="chest-btn open" data-act="open" data-i="${i}">פתחו</button>`
+                : `<button class="chest-btn skip" data-act="skip" data-i="${i}"><span class="gem-ico"></span>${cost} דלגו</button>`}
+        </div>`;
+    }).join('');
+}
+
+function tickChests() {
+    const now = Date.now();
+    let needRebuild = false;
+    P.chests.forEach((c, i) => {
+        if (!c) return;
+        const el = $('chestGrid').querySelector(`.timer[data-i="${i}"]`);
+        if (!el) return;
+        const left = c.readyAt - now;
+        if (left <= 0) { needRebuild = true; return; }
+        el.textContent = fmtLeft(left);
+        const btn = $('chestGrid').querySelector(`.chest-btn.skip[data-i="${i}"]`);
+        if (btn) btn.innerHTML = `<span class="gem-ico"></span>${skipCost(left)} דלגו`;
+    });
+    if (needRebuild) buildChests();
+}
+
+function buildChestLegend() {
+    $('chestLegend').innerHTML = Object.values(CHEST_TYPES).map(t => {
+        const best = t.odds.legendary ? `אגדי ${Math.round(t.odds.legendary * 100)}%`
+                   : (t.odds.epic ? `אפי ${Math.round(t.odds.epic * 100)}%` : 'רגיל בעיקר');
+        const hrs = t.hours < 1 ? `${Math.round(t.hours * 60)} דק׳` : `${t.hours} שעות`;
+        return `<div class="legend-row">
+            <div class="chest-ico small el-${t.el}">${CHEST_SVG}</div>
+            <div><div class="legend-name">${t.name} · ${hrs}</div>
+            <div class="legend-desc">${t.cards} קלפים · ${best}</div></div>
+        </div>`;
+    }).join('');
+}
+
+function openChests() {
+    buildChests();
+    buildChestLegend();
+    show('chestScreen');
+    clearInterval(chestTimer);
+    chestTimer = setInterval(tickChests, 1000);
+}
+
+function leaveChests() {
+    clearInterval(chestTimer);
+    chestTimer = null;
+}
+
+function skipChest(i) {
+    const c = P.chests[i];
+    if (!c) return;
+    const left = c.readyAt - Date.now();
+    if (left <= 0) return;
+    const cost = skipCost(left);
+    if (!spendGems(P, cost)) return toast('אין מספיק יהלומים');
+    c.readyAt = Date.now();
+    saveProfile(P);
+    refreshCurrency();
+    buildChests();
+    toast('התיבה נפתחה מיד');
+}
+
+function openChest(i) {
+    const c = P.chests[i];
+    if (!c || c.readyAt > Date.now()) return;
+    const t = CHEST_TYPES[c.type];
+    const rw = openChestRewards(c.type);
+
+    // קלף שכבר יש ממנו 3 עותקים מומר למטבעות במקום להיעלם
+    let converted = 0;
+    rw.cards.forEach(card => {
+        const have = P.owned[card.id] || 0;
+        if (have >= MAX_COPIES) { converted += Math.round(cardPrice(card) * 0.25); }
+        else P.owned[card.id] = have + 1;
+    });
+    P.coins += rw.coins + converted;
+    P.gems += rw.gems;
+    P.chests[i] = null;
+    saveProfile(P);
+    refreshCurrency();
+    buildChests();
+
+    $('rewardTitle').textContent = t.name + ' נפתחה!';
+    $('rewardCards').innerHTML = rw.cards.map(card => {
+        const rar = rarityOf(card);
+        return `<div class="reward-card rar-${rar}">
+            <div class="shop-art el-${card.el}${card.img ? ' has-img' : ''}">${artHTML(card)}</div>
+            <div class="reward-name">${card.name}</div>
+            <div class="shop-rar rar-${rar}">${RARITIES[rar].name}</div>
+        </div>`;
+    }).join('');
+    $('rewardCurrency').innerHTML =
+        `<div class="reward-cur"><span class="coin-ico"></span>${rw.coins + converted}</div>` +
+        (rw.gems ? `<div class="reward-cur"><span class="gem-ico"></span>${rw.gems}</div>` : '') +
+        (converted ? `<div class="reward-note">${converted} מטבעות מקלפים כפולים</div>` : '');
+    $('rewardOverlay').classList.add('open');
+}
+
 /* ---------------- עריכת החפיסה ---------------- */
 
-let draftCounts = {};
+let draftDeck = {};
 
 function miniArt(card) {
     return `<div class="edit-art el-${card.el}${card.img ? ' has-img' : ''}">
@@ -580,13 +784,20 @@ function miniArt(card) {
 }
 
 function renderEditor() {
-    $('editList').innerHTML = CARD_POOL.map(card => {
-        const n = draftCounts[card.id] || 0;
+    // רק קלפים שבבעלות מוצגים; השאר נמצאים בחנות
+    const owned = ownedOf(P);
+    const ids = Object.keys(owned).filter(id => owned[id] > 0)
+        .sort((a, b) => byId(b).power - byId(a).power);
+    $('editList').innerHTML = ids.map(id => {
+        const card = byId(id);
+        const n = draftDeck[id] || 0;
+        const own = owned[id];
         const ab = ABILITIES[card.ability];
+        const rar = rarityOf(card);
         return `<div class="edit-row${n ? '' : ' empty'}" data-id="${card.id}">
             ${miniArt(card)}
             <div class="edit-info">
-                <div class="edit-name">${card.name}</div>
+                <div class="edit-name">${card.name} <span class="own-note">בבעלות ${own}</span></div>
                 <div class="edit-ab ab-${ab.tone}">
                     <svg viewBox="0 0 24 24">${ab.icon}</svg><span>${ab.name} · ${ab.desc}</span>
                 </div>
@@ -602,32 +813,34 @@ function renderEditor() {
 }
 
 function updateEditorMeter() {
-    const total = countsTotal(draftCounts);
+    const total = countsTotal(draftDeck);
     const ok = total === DECK_SIZE;
     $('deckCountLabel').textContent = `${total} / ${DECK_SIZE} קלפים`;
     $('deckCountLabel').classList.toggle('bad', !ok);
-    $('deckPowerLabel').textContent = `כוח כולל ${countsPower(draftCounts)}`;
+    $('deckPowerLabel').textContent = `כוח כולל ${countsPower(draftDeck)}`;
     $('deckMeterBar').style.width = Math.min(100, (total / DECK_SIZE) * 100) + '%';
     $('deckMeterBar').classList.toggle('over', total > DECK_SIZE);
     $('btnSaveDeck').disabled = !ok;
     const gap = Math.abs(DECK_SIZE - total);
-    $('btnSaveDeck').textContent = ok ? 'שמור והתחל קרב' : (total < DECK_SIZE
+    $('btnSaveDeck').textContent = ok ? 'שמור חפיסה' : (total < DECK_SIZE
         ? (gap === 1 ? 'חסר קלף אחד' : `חסרים ${gap} קלפים`)
         : (gap === 1 ? 'יש קלף אחד עודף' : `יש ${gap} קלפים עודפים`));
 }
 
 function openEditor() {
-    draftCounts = { ...S.counts };
+    draftDeck = { ...P.deck };
     renderEditor();
     show('editScreen');
 }
 
 function stepCard(id, delta) {
-    const cur = draftCounts[id] || 0;
+    const cur = draftDeck[id] || 0;
+    const own = ownedOf(P)[id] || 0;
     const next = cur + delta;
-    if (next < 0 || next > MAX_COPIES) return;
-    if (delta > 0 && countsTotal(draftCounts) >= DECK_SIZE) return;   // אין מקום בחפיסה
-    if (next === 0) delete draftCounts[id]; else draftCounts[id] = next;
+    if (next < 0) return;
+    if (next > Math.min(MAX_COPIES, own)) return toast(`יש לכם רק ${own} עותקים`);
+    if (delta > 0 && countsTotal(draftDeck) >= DECK_SIZE) return;
+    if (next === 0) delete draftDeck[id]; else draftDeck[id] = next;
 
     const row = $('editList').querySelector(`.edit-row[data-id="${id}"]`);
     row.querySelector('.step-count').textContent = next;
@@ -635,7 +848,18 @@ function stepCard(id, delta) {
     updateEditorMeter();
 }
 
-/* ---------------- אתחול ---------------- */
+/* ---------------- הודעות קצרות ---------------- */
+
+let toastTimer = null;
+function toast(msg) {
+    const el = $('toast');
+    el.textContent = msg;
+    el.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('on'), 2200);
+}
+
+/* ---------------- אוסף ומקרא ---------------- */
 
 function buildCodex() {
     $('codexGrid').innerHTML = CARD_POOL.map(c => `<div class="codex-card">${cardFrontHTML(c)}</div>`).join('');
@@ -649,21 +873,62 @@ function buildLegend() {
         </div>`).join('');
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    S.counts = loadCounts();
-    S.cleared = loadProgress();
+/* ---------------- שם השחקן ---------------- */
 
-    // לוגו המשחק; אם הקובץ חסר נופלים חזרה למפלצת המצוירת
+function openNameScreen(first) {
+    $('nameInput').value = P.name || '';
+    $('nameTitle').textContent = first ? 'ברוכים הבאים לזירה' : 'שינוי שם שחקן';
+    $('nameSub').textContent = first
+        ? 'בחרו שם שחקן כדי להתחיל'
+        : 'אפשר לשנות את השם בכל רגע';
+    $('btnNameSkip').style.display = first ? 'none' : '';
+    show('nameScreen');
+    setTimeout(() => $('nameInput').focus(), 150);
+}
+
+function saveName() {
+    const v = $('nameInput').value.trim();
+    if (!v) return toast('צריך להזין שם');
+    if (v.length > 16) return toast('שם ארוך מדי (עד 16 תווים)');
+    P.name = v;
+    saveProfile(P);
+    refreshCurrency();
+    toast(isAdmin(P) ? 'ברוך הבא, אדמין — כסף אינסופי הופעל' : `שלום ${v}`);
+    show('homeScreen');
+}
+
+/* ---------------- אתחול ---------------- */
+
+document.addEventListener('DOMContentLoaded', () => {
+    P = loadProfile();
+
     $('crest').innerHTML = `<img class="crest-img" src="art/logo.jpg" alt="הזירה"
         onerror="this.remove(); document.getElementById('crest').innerHTML = monsterSVG(CARD_POOL[0].art);">`;
-    $('enemyAvatar').innerHTML = monsterSVG({ body: 'spiky', c1: '#B3372E', c2: '#F0C24A', eyes: 2, eyeStyle: 'angry', horns: 'twin', mouth: 'fangs', extra: 'none', front: 'none' });
     $('meAvatar').innerHTML = monsterSVG({ body: 'blob', c1: '#3A65B8', c2: '#BFE4FF', eyes: 2, eyeStyle: 'glow', horns: 'ears', mouth: 'grin', extra: 'none', front: 'none' });
 
     buildCodex();
     buildLegend();
+    refreshCurrency();
 
-    // מעטפת חשובה: מאזין מעביר את אובייקט האירוע כארגומנט, ולכן קוראים במפורש
+    // ניווט ראשי
+    $('btnCampaign').addEventListener('click', openMap);
     $('btnPlay').addEventListener('click', () => startGame(null));
+    $('btnEdit').addEventListener('click', openEditor);
+    $('btnShop').addEventListener('click', () => { buildShop(); show('shopScreen'); });
+    $('btnChests').addEventListener('click', openChests);
+    $('btnCodex').addEventListener('click', () => show('codexScreen'));
+    $('btnRules').addEventListener('click', () => $('rulesOverlay').classList.add('open'));
+    $('profileChip').addEventListener('click', () => openNameScreen(false));
+
+    // חזרה
+    const backHome = () => show('homeScreen');
+    $('btnMapBack').addEventListener('click', backHome);
+    $('btnShopBack').addEventListener('click', backHome);
+    $('btnChestBack').addEventListener('click', () => { leaveChests(); backHome(); });
+    $('btnEditBack').addEventListener('click', backHome);
+    document.querySelector('.codex-back').addEventListener('click', backHome);
+
+    // קרב
     $('btnDraw').addEventListener('click', drawRound);
     $('btnRematch').addEventListener('click', () => startGame(S.stageIdx));
     $('btnHome').addEventListener('click', () => {
@@ -671,10 +936,6 @@ document.addEventListener('DOMContentLoaded', () => {
         S.mode === 'campaign' ? openMap() : show('homeScreen');
     });
     $('btnQuit').addEventListener('click', () => (S.mode === 'campaign' ? openMap() : show('homeScreen')));
-
-    // מפת השלבים
-    $('btnCampaign').addEventListener('click', openMap);
-    $('btnMapBack').addEventListener('click', () => show('homeScreen'));
     $('btnNextStage').addEventListener('click', () => {
         $('resultOverlay').classList.remove('open');
         const next = S.stageIdx + 1;
@@ -690,31 +951,50 @@ document.addEventListener('DOMContentLoaded', () => {
         $('resultOverlay').classList.remove('open');
         startGame(+row.dataset.i);
     });
-    $('btnCodex').addEventListener('click', () => show('codexScreen'));
-    document.querySelector('.codex-back').addEventListener('click', () => show('homeScreen'));
+
+    // חנות
+    $('shopGrid').addEventListener('click', e => {
+        const btn = e.target.closest('.shop-buy');
+        if (!btn || btn.disabled) return;
+        buyCard(+btn.dataset.id);
+    });
+
+    // תיבות
+    $('chestGrid').addEventListener('click', e => {
+        const btn = e.target.closest('.chest-btn');
+        if (!btn) return;
+        const i = +btn.dataset.i;
+        btn.dataset.act === 'open' ? openChest(i) : skipChest(i);
+    });
+    $('btnRewardClose').addEventListener('click', () => $('rewardOverlay').classList.remove('open'));
 
     // עריכת חפיסה
-    $('btnEdit').addEventListener('click', openEditor);
-    $('btnEditBack').addEventListener('click', () => show('homeScreen'));
-    $('btnReset').addEventListener('click', () => { draftCounts = defaultCounts(); renderEditor(); });
+    $('btnReset').addEventListener('click', () => { draftDeck = repairDeck(ownedOf(P)); renderEditor(); });
     $('editList').addEventListener('click', e => {
         const btn = e.target.closest('.step-btn');
         if (!btn) return;
         stepCard(+btn.closest('.edit-row').dataset.id, btn.dataset.act === 'plus' ? 1 : -1);
     });
     $('btnSaveDeck').addEventListener('click', () => {
-        if (countsTotal(draftCounts) !== DECK_SIZE) return;
-        S.counts = { ...draftCounts };
-        saveCounts(S.counts);
-        // שמירה מחזירה למקום שממנו הגיעו, ולא זורקת אתכם לקרב מהיר
-        S.mode === 'campaign' ? openMap() : show('homeScreen');
+        if (countsTotal(draftDeck) !== DECK_SIZE) return;
+        P.deck = { ...draftDeck };
+        saveProfile(P);
+        toast('החפיסה נשמרה');
+        show('homeScreen');
     });
 
+    // שם שחקן
+    $('btnNameSave').addEventListener('click', saveName);
+    $('btnNameSkip').addEventListener('click', () => show('homeScreen'));
+    $('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') saveName(); });
+
     // חוקים
-    $('btnRules').addEventListener('click', () => $('rulesOverlay').classList.add('open'));
     document.querySelectorAll('.close-overlay').forEach(b =>
         b.addEventListener('click', () => $('rulesOverlay').classList.remove('open')));
     $('rulesOverlay').addEventListener('click', e => {
         if (e.target === $('rulesOverlay')) $('rulesOverlay').classList.remove('open');
     });
+
+    // מסך פתיחה: בחירת שם בהרצה ראשונה
+    if (!P.name) openNameScreen(true); else show('homeScreen');
 });

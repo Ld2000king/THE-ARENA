@@ -302,7 +302,10 @@ button, [role="button"], .clickable { touch-action: manipulation; }
     50%     { background-position: 100% 50%; }
 }
 .tagline { font-size: 16px; color: var(--text-secondary); margin-bottom: 22px; }
-.home-actions { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+.home-actions { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+.btn-row { display: flex; gap: 10px; }
+.btn-row .mega-btn { flex: 1; }
+.btn-gold { background: var(--grad-gold); color: var(--on-bright); box-shadow: var(--glow-gold); }
 .home-foot { margin-top: 18px; font-size: 13px; color: var(--text-secondary); opacity: .8; }
 
 /* ============================================================================
@@ -351,7 +354,32 @@ button, [role="button"], .clickable { touch-action: manipulation; }
 }
 .deck-bar i { display: block; height: 100%; border-radius: 99px; transition: width .45s var(--spring); }
 .enemy .deck-bar i { background: var(--grad-red); }
-.me .deck-bar i { background: var(--grad-blue); }
+.me .deck-bar i { background: var(--grad-green); }
+/* מד חיים נמוך — אזהרה ויזואלית */
+.deck-bar i.low { background: var(--grad-red) !important; }
+
+.hp-box { flex: none; text-align: center; }
+.cards-left {
+    margin-top: 3px; font-size: 10.5px; color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+/* מספר נזק צף */
+.dmg-float {
+    position: absolute; inset-inline: 0; top: 34%;
+    z-index: 8; pointer-events: none; text-align: center;
+    font-family: var(--font-display); font-weight: 900; font-size: 34px;
+    animation: dmgRise 1.1s ease-out forwards;
+    text-shadow: 0 3px 12px rgba(0,0,0,.7);
+}
+.dmg-float.dmg  { color: #FF6B5E; }
+.dmg-float.heal { color: #4ED89B; }
+@keyframes dmgRise {
+    0%   { transform: translateY(10px) scale(.6); opacity: 0 }
+    25%  { transform: translateY(0) scale(1.15); opacity: 1 }
+    70%  { transform: translateY(-14px) scale(1); opacity: 1 }
+    100% { transform: translateY(-34px) scale(.9); opacity: 0 }
+}
 
 .deck-count {
     font-family: var(--font-display); font-weight: 900; font-size: 22px;
@@ -598,6 +626,249 @@ button, [role="button"], .clickable { touch-action: manipulation; }
 }
 
 /* ============================================================================
+   HUD, מטבעות, שם שחקן והודעות
+   ============================================================================ */
+.top-hud {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%; margin-bottom: 6px;
+}
+.profile-chip {
+    flex: 1; min-width: 0;
+    display: flex; align-items: center; gap: 6px;
+    border: none; cursor: pointer;
+    background: var(--panel-light);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px;
+    box-shadow: var(--shadow-depth-sm);
+    font-family: var(--font-display); font-weight: 700; font-size: 15px;
+    color: var(--text-dark);
+    transition: transform .15s var(--spring), filter .15s ease;
+}
+.profile-chip:active { transform: scale(.94); filter: brightness(.9); }
+.player-name-val { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-badge {
+    flex: none; font-size: 10.5px; font-weight: 800;
+    background: var(--grad-gold); color: var(--on-bright);
+    border-radius: 7px; padding: 2px 6px;
+}
+
+.cur-chip {
+    flex: none;
+    display: flex; align-items: center; gap: 5px;
+    background: var(--panel-light);
+    border-radius: var(--radius-sm);
+    padding: 9px 11px;
+    box-shadow: var(--shadow-depth-sm);
+    font-family: var(--font-display); font-weight: 800; font-size: 15px;
+    color: var(--text-dark);
+    font-variant-numeric: tabular-nums;
+}
+.coin-ico, .gem-ico {
+    width: 15px; height: 15px; flex: none; display: inline-block;
+    border-radius: 50%;
+}
+.coin-ico { background: linear-gradient(160deg, #F0C24A, #C99A2E); box-shadow: inset 0 -1px 2px rgba(0,0,0,.3); }
+.gem-ico {
+    border-radius: 3px;
+    background: linear-gradient(160deg, #7FE4FF, #4E7FD6);
+    transform: rotate(45deg);
+    box-shadow: inset 0 -1px 2px rgba(0,0,0,.25);
+}
+
+.screen-hint {
+    font-size: 12.5px; line-height: 1.45; color: var(--text-secondary);
+    background: var(--panel-light);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    box-shadow: var(--shadow-depth-sm);
+}
+
+#toast {
+    position: absolute; z-index: 90;
+    inset-inline: 22px; bottom: calc(26px + var(--safe-bottom));
+    background: var(--surface-3);
+    color: var(--text-dark);
+    border-radius: var(--radius-sm);
+    padding: 13px 16px;
+    text-align: center; font-size: 14px; font-weight: 600;
+    box-shadow: var(--shadow-depth-lg);
+    opacity: 0; visibility: hidden; transform: translateY(12px);
+    transition: opacity .22s ease, transform .22s var(--spring), visibility .22s;
+    pointer-events: none;
+}
+#toast.on { opacity: 1; visibility: visible; transform: translateY(0); }
+
+/* ============================================================================
+   NAME SCREEN
+   ============================================================================ */
+#nameScreen { justify-content: center; align-items: center; padding: 26px; }
+.name-wrap {
+    width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.crest.small { width: 92px; height: 92px; border-radius: 28px; animation: none; }
+.crest.small svg { width: 52px; height: 52px; }
+.name-sub { font-size: 14px; color: var(--text-secondary); text-align: center; margin-bottom: 4px; }
+.name-input {
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid rgba(255,255,255,.10);
+    border-radius: var(--radius-btn);
+    padding: 15px 16px;
+    font-family: var(--font-display); font-size: 18px; font-weight: 700;
+    color: var(--text-dark);
+    text-align: center;
+    /* שדה קלט חייב לאפשר בחירה, למרות ה-user-select הגלובלי */
+    -webkit-user-select: text; user-select: text;
+}
+.name-input:focus { outline: 3px solid #8FB4EE; outline-offset: 2px; }
+.name-input::placeholder { color: var(--text-secondary); font-weight: 500; }
+
+/* ============================================================================
+   RARITY
+   ============================================================================ */
+.rar-common    { --rar: #8A93A6; }
+.rar-rare      { --rar: #4E9FD6; }
+.rar-epic      { --rar: #9C6BE8; }
+.rar-legendary { --rar: #E0A93A; }
+
+.rar-badge {
+    position: absolute; top: 5px; inset-inline-end: 5px; z-index: 2;
+    font-family: var(--font-display); font-weight: 800; font-size: 9.5px;
+    color: var(--on-bright);
+    background: var(--rar);
+    border-radius: 6px; padding: 2px 6px;
+    /* תווית נדירות זעירה — חריגה מודעת מ-16px, היא דקורטיבית ולא אינטראקטיבית */
+}
+.card-front.rar-legendary { border-color: rgba(224,169,58,.5); border-top-color: rgba(224,169,58,.75); }
+.card-front.rar-epic      { border-color: rgba(156,107,232,.45); border-top-color: rgba(156,107,232,.7); }
+
+/* ============================================================================
+   SHOP
+   ============================================================================ */
+#shopScreen, #chestScreen {
+    padding: calc(10px + var(--safe-top)) calc(14px + var(--safe-right))
+             calc(12px + var(--safe-bottom)) calc(14px + var(--safe-left));
+    gap: 10px;
+}
+.shop-grid {
+    flex: 1; overflow-y: auto;
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 10px; padding-bottom: 6px;
+    overscroll-behavior: contain; touch-action: pan-y;
+}
+.shop-item {
+    background: var(--panel-light);
+    border: 1px solid rgba(255,255,255,.06);
+    border-top-color: var(--rar);
+    border-radius: var(--radius-card);
+    padding: 9px;
+    box-shadow: var(--shadow-depth-md);
+    display: flex; flex-direction: column; gap: 6px;
+}
+.shop-art {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border-radius: var(--radius-tile); overflow: hidden;
+    display: grid; place-items: center;
+    background: radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--el) 30%, transparent), transparent 70%), var(--surface-2);
+}
+.shop-art .mon { width: 90%; height: 90%; }
+.shop-art.has-img .mon { display: none; }
+.shop-art.img-failed .mon-img { display: none; }
+.shop-art.has-img.img-failed .mon { display: block; }
+.own-badge {
+    position: absolute; bottom: 4px; inset-inline-end: 4px; z-index: 2;
+    background: var(--surface-3); color: var(--text-dark);
+    border-radius: 7px; padding: 2px 7px;
+    font-family: var(--font-display); font-weight: 800; font-size: 12px;
+}
+.shop-name { font-family: var(--font-display); font-weight: 700; font-size: 13.5px; color: var(--text-dark); text-align: center; line-height: 1.15; }
+.shop-rar { font-size: 11.5px; font-weight: 700; color: var(--rar); text-align: center; }
+.shop-buy {
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    border: none; border-radius: var(--radius-sm);
+    background: var(--grad-gold); color: var(--on-bright);
+    font-family: var(--font-display); font-weight: 800; font-size: 16px;
+    padding: 10px 8px; cursor: pointer;
+    box-shadow: var(--shadow-depth-sm);
+    transition: transform .15s var(--spring), filter .15s ease;
+}
+.shop-buy:active { transform: scale(.93); filter: brightness(.9); }
+.shop-buy.disabled { background: var(--surface-2); color: var(--text-secondary); pointer-events: none; }
+
+/* ============================================================================
+   CHESTS
+   ============================================================================ */
+.chest-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+}
+.chest-slot {
+    background: var(--panel-light);
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: var(--radius-card);
+    padding: 14px 10px;
+    box-shadow: var(--shadow-depth-md);
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    text-align: center;
+}
+.chest-slot.empty { opacity: .5; }
+.chest-slot.ready { border-top-color: rgba(78,216,155,.6); box-shadow: var(--glow-green); }
+.chest-ico { width: 46px; height: 46px; color: var(--el, var(--text-secondary)); }
+.chest-slot.el-green  { --el: #4ED89B; }
+.chest-slot.el-blue   { --el: #8FB4EE; }
+.chest-slot.el-gold   { --el: #E3C263; }
+.chest-slot.el-purple { --el: #A79DF2; }
+.chest-ico svg { width: 100%; height: 100%; }
+.chest-name { font-family: var(--font-display); font-weight: 700; font-size: 14.5px; color: var(--text-dark); }
+.chest-sub { font-size: 13px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.chest-btn {
+    margin-top: 2px;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    width: 100%; border: none; border-radius: var(--radius-sm);
+    padding: 9px 8px; cursor: pointer;
+    font-family: var(--font-display); font-weight: 800; font-size: 15px;
+    box-shadow: var(--shadow-depth-sm);
+    transition: transform .15s var(--spring), filter .15s ease;
+}
+.chest-btn:active { transform: scale(.93); filter: brightness(.9); }
+.chest-btn.open { background: var(--grad-green); color: var(--text-dark); }
+.chest-btn.skip { background: var(--surface-3); color: var(--text-dark); }
+
+.chest-legend { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
+.chest-ico.small { width: 26px; height: 26px; flex: none; }
+.legend-row .chest-ico.small.el-green  { color: #4ED89B; }
+.legend-row .chest-ico.small.el-blue   { color: #8FB4EE; }
+.legend-row .chest-ico.small.el-gold   { color: #E3C263; }
+.legend-row .chest-ico.small.el-purple { color: #A79DF2; }
+
+/* ---- שלל התיבה ---- */
+.reward-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+}
+.reward-card {
+    background: var(--surface-2);
+    border: 1px solid rgba(255,255,255,.06);
+    border-top-color: var(--rar);
+    border-radius: var(--radius-sm);
+    padding: 6px;
+    display: flex; flex-direction: column; gap: 4px;
+    animation: rewardPop .35s var(--spring) backwards;
+}
+.reward-card:nth-child(2) { animation-delay: .06s }
+.reward-card:nth-child(3) { animation-delay: .12s }
+.reward-card:nth-child(4) { animation-delay: .18s }
+.reward-card:nth-child(5) { animation-delay: .24s }
+.reward-card:nth-child(6) { animation-delay: .30s }
+@keyframes rewardPop { from { transform: scale(.7); opacity: 0 } }
+.reward-name { font-family: var(--font-display); font-weight: 700; font-size: 11px; text-align: center; color: var(--text-dark); line-height: 1.15; }
+.reward-currency { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; }
+.reward-cur {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--font-display); font-weight: 800; font-size: 19px; color: var(--text-dark);
+}
+.reward-note { width: 100%; text-align: center; font-size: 12px; color: var(--text-secondary); }
+
+/* ============================================================================
    STAGE MAP
    ============================================================================ */
 #mapScreen {
@@ -736,6 +1007,7 @@ button, [role="button"], .clickable { touch-action: manipulation; }
 
 .edit-info { flex: 1; min-width: 0; }
 .edit-name { font-family: var(--font-display); font-weight: 700; font-size: 15px; color: var(--text-dark); }
+.own-note { font-size: 11.5px; font-weight: 600; color: var(--text-secondary); }
 .edit-ab { display: flex; align-items: center; gap: 5px; margin-top: 3px; font-size: 12px; line-height: 1.25; }
 .edit-ab svg { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .edit-ab span { color: var(--text-secondary); }
