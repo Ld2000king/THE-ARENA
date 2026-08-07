@@ -66,26 +66,50 @@
 
     --app-max-width: 460px;
     --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    /* ---- מרווחי בטיחות למסכי טלפון (נאץ' / סרגל ניווט) ---- */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { height: 100%; }
+* {
+    margin: 0; padding: 0; box-sizing: border-box;
+    /* ממשק אפליקציה: בלי בחירת טקסט, בלי תפריט לחיצה-ארוכה, בלי הבהוב כחול */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;        /* מבטל משיכה-לרענון וקפיצת גומי */
+    -webkit-text-size-adjust: 100%;   /* בלי ניפוח פונטים בסיבוב מסך */
+    text-size-adjust: 100%;
+}
 
 body {
+    /* נעילת הגלילה של הדף: הכל חי בתוך מסגרת בגובה קבוע */
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: manipulation;       /* מבטל זום בהקשה-כפולה, משאיר גלילה פנימית */
     font-family: var(--font-body);
     background: var(--bg-deep-2);
-    min-height: 100dvh;
     color: var(--text-light);
-    overflow-x: hidden;
-    -webkit-tap-highlight-color: transparent;
 }
 
 button, [role="button"], .clickable { touch-action: manipulation; }
 
 #app {
     position: relative;
-    min-height: 100vh;
-    min-height: 100dvh;
+    height: 100%;
     max-width: var(--app-max-width);
     margin: 0 auto;
     background: var(--bg-deep);
@@ -94,9 +118,30 @@ button, [role="button"], .clickable { touch-action: manipulation; }
     overflow: hidden;
 }
 
+/* על טלפון אמיתי — מסך מלא בלי פינות מעוגלות שנחתכות בקצה */
+@media (max-width: 480px) {
+    #app { border-radius: 0; box-shadow: none; max-width: 100%; }
+}
+
 /* ---------------- screens ---------------- */
-.screen { display: none; min-height: 100dvh; flex-direction: column; }
+.screen { display: none; height: 100%; flex-direction: column; }
 .screen.active { display: flex; }
+
+/* אזורי גלילה פנימיים — גלילה חלקה שלא "בורחת" לדף שמאחור */
+.codex-grid, .edit-list, .sheet, .home-content {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+}
+
+/* כיבוד העדפת מערכת להפחתת תנועה */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+    }
+}
 
 /* ============================================================================
    BUTTONS
@@ -126,9 +171,18 @@ button, [role="button"], .clickable { touch-action: manipulation; }
     pointer-events: none;
     transition: left .5s ease;
 }
-.mega-btn:hover { transform: translateY(-3px) scale(1.01); filter: brightness(1.1); }
-.mega-btn:hover::after { left: 130%; }
-.mega-btn:active { transform: scale(.95); filter: brightness(.92); }
+/* :hover רק במכשירים עם עכבר — בנייד hover "נדבק" אחרי הקשה */
+@media (hover: hover) and (pointer: fine) {
+    .mega-btn:hover { transform: translateY(-3px) scale(1.01); filter: brightness(1.1); }
+    .mega-btn:hover::after { left: 130%; }
+}
+/* משוב לחיצה — נדחס פנימה ומאבד גובה, כמו כפתור פיזי */
+.mega-btn:active {
+    transform: scale(.955) translateY(1px);
+    filter: brightness(.9);
+    box-shadow: var(--shadow-depth-sm);
+}
+.mega-btn:focus-visible { outline: 3px solid #8FB4EE; outline-offset: 3px; }
 .mega-btn:disabled { opacity: .45; filter: grayscale(.5); pointer-events: none; }
 
 .primary-cta {
@@ -165,7 +219,8 @@ button, [role="button"], .clickable { touch-action: manipulation; }
     transition: transform .15s var(--spring), filter .15s ease;
 }
 .icon-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
-.icon-btn:active { transform: scale(.9); filter: brightness(.9); }
+.icon-btn:active { transform: scale(.88); filter: brightness(.85); }
+.icon-btn:focus-visible { outline: 3px solid #8FB4EE; outline-offset: 3px; }
 .btn-red-soft { background: rgba(179,55,46,.18); color: #F0928A; }
 .icon-btn.muted { opacity: .45; }
 
@@ -195,10 +250,16 @@ button, [role="button"], .clickable { touch-action: manipulation; }
 
 .home-content {
     position: relative; z-index: 1;
-    padding: 40px 26px 34px;
+    width: 100%;
+    max-height: 100%;
+    overflow-y: auto;                 /* שסתום ביטחון בטלפונים נמוכים */
+    padding: calc(32px + var(--safe-top)) calc(26px + var(--safe-right))
+             calc(28px + var(--safe-bottom)) calc(26px + var(--safe-left));
     display: flex; flex-direction: column; align-items: center;
     gap: 10px;
+    scrollbar-width: none;
 }
+.home-content::-webkit-scrollbar { display: none; }
 .crest {
     width: 132px; height: 132px;
     display: grid; place-items: center;
@@ -237,7 +298,11 @@ button, [role="button"], .clickable { touch-action: manipulation; }
 /* ============================================================================
    GAME SCREEN
    ============================================================================ */
-#gameScreen { padding: 12px 14px calc(12px + env(safe-area-inset-bottom)); gap: 10px; }
+#gameScreen {
+    padding: calc(10px + var(--safe-top)) calc(14px + var(--safe-right))
+             calc(10px + var(--safe-bottom)) calc(14px + var(--safe-left));
+    gap: 10px;
+}
 
 .top-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .round-chip {
@@ -497,7 +562,11 @@ button, [role="button"], .clickable { touch-action: manipulation; }
 /* ============================================================================
    DECK EDITOR
    ============================================================================ */
-#editScreen { padding: 12px 14px calc(12px + env(safe-area-inset-bottom)); gap: 10px; }
+#editScreen {
+    padding: calc(10px + var(--safe-top)) calc(14px + var(--safe-right))
+             calc(10px + var(--safe-bottom)) calc(14px + var(--safe-left));
+    gap: 10px;
+}
 
 .deck-meter {
     background: var(--panel-light);
@@ -560,7 +629,8 @@ button, [role="button"], .clickable { touch-action: manipulation; }
     box-shadow: var(--shadow-depth-sm);
     transition: transform .15s var(--spring), filter .15s ease;
 }
-.step-btn:active { transform: scale(.88); filter: brightness(.9); }
+.step-btn:active { transform: scale(.84); filter: brightness(.82); }
+.step-btn:focus-visible { outline: 3px solid #8FB4EE; outline-offset: 2px; }
 .step-count {
     width: 26px; text-align: center;
     font-family: var(--font-display); font-weight: 900; font-size: 17px;
@@ -570,7 +640,11 @@ button, [role="button"], .clickable { touch-action: manipulation; }
 /* ============================================================================
    CODEX
    ============================================================================ */
-#codexScreen { padding: 12px 14px calc(16px + env(safe-area-inset-bottom)); gap: 12px; }
+#codexScreen {
+    padding: calc(10px + var(--safe-top)) calc(14px + var(--safe-right))
+             calc(12px + var(--safe-bottom)) calc(14px + var(--safe-left));
+    gap: 12px;
+}
 .codex-grid {
     flex: 1; overflow-y: auto;
     display: grid; grid-template-columns: repeat(2, 1fr);
@@ -589,8 +663,10 @@ button, [role="button"], .clickable { touch-action: manipulation; }
     display: none;
     background: rgba(6,7,10,.72);
     backdrop-filter: blur(6px);
-    padding: 22px;
+    padding: calc(22px + var(--safe-top)) calc(22px + var(--safe-right))
+             calc(22px + var(--safe-bottom)) calc(22px + var(--safe-left));
     align-items: center; justify-content: center;
+    overscroll-behavior: contain;
 }
 .overlay.open { display: flex; animation: fadeIn .25s ease; }
 @keyframes fadeIn { from { opacity: 0 } }
@@ -636,5 +712,23 @@ button, [role="button"], .clickable { touch-action: manipulation; }
 @media (max-height: 700px) {
     .slot { max-width: 128px; }
     .crest { width: 108px; height: 108px; }
+    .crest svg { width: 78px; height: 78px; }
     .main-title { font-size: 52px; }
+    .home-content { gap: 8px; }
+}
+
+/* very short phones — הכל חייב להיכנס בלי גלילה */
+@media (max-height: 620px) {
+    .slot { max-width: 108px; }
+    .crest { width: 84px; height: 84px; border-radius: 28px; }
+    .crest svg { width: 60px; height: 60px; }
+    .main-title { font-size: 42px; }
+    .tagline { font-size: 14px; margin-bottom: 14px; }
+    .mega-btn { padding: 13px 18px; font-size: 16px; }
+    .draw-btn { padding: 14px 18px; font-size: 19px; }
+    .player-strip { padding: 7px 12px; }
+    .avatar { width: 38px; height: 38px; }
+    .avatar svg { width: 28px; height: 28px; }
+    .verdict { min-height: 52px; padding: 8px 12px; }
+    .home-foot { display: none; }
 }
