@@ -25,7 +25,8 @@
             <p class="tagline">קרב מפלצות · הכוח הגבוה מנצח</p>
 
             <div class="home-actions">
-                <button class="mega-btn primary-cta" id="btnPlay">התחל קרב</button>
+                <button class="mega-btn primary-cta" id="btnCampaign">מפת השלבים</button>
+                <button class="mega-btn btn-orange" id="btnPlay">קרב מהיר</button>
                 <button class="mega-btn btn-blue" id="btnEdit">ערוך חפיסה</button>
                 <button class="mega-btn btn-purple" id="btnCodex">אוסף המפלצות</button>
                 <button class="mega-btn btn-ghost" id="btnRules">חוקי המשחק</button>
@@ -49,7 +50,7 @@
         <div class="player-strip enemy">
             <div class="avatar enemy-avatar" id="enemyAvatar"></div>
             <div class="strip-text">
-                <span class="strip-name">היריב</span>
+                <span class="strip-name" id="enemyName">היריב</span>
                 <div class="deck-bar"><i id="enemyBar"></i></div>
             </div>
             <div class="deck-count" id="enemyCount">20</div>
@@ -93,6 +94,18 @@
         <div class="draw-dock">
             <button class="mega-btn draw-btn" id="btnDraw">שלוף!</button>
         </div>
+    </section>
+
+    <!-- ==================== מפת השלבים ==================== -->
+    <section id="mapScreen" class="screen">
+        <header class="top-bar">
+            <button class="icon-btn btn-red-soft" id="btnMapBack" aria-label="חזרה">
+                <svg viewBox="0 0 24 24"><path d="M6 6 L18 18 M18 6 L6 18"/></svg>
+            </button>
+            <div class="round-chip">מפת השלבים</div>
+            <div class="progress-chip"><span id="progressLabel">0/10</span></div>
+        </header>
+        <div class="stage-list" id="stageList"></div>
     </section>
 
     <!-- ==================== עריכת החפיסה ==================== -->
@@ -159,7 +172,9 @@
             <h2 class="sheet-title" id="resultTitle">ניצחון!</h2>
             <p class="result-sub" id="resultSub"></p>
             <div class="result-stats" id="resultStats"></div>
-            <button class="mega-btn primary-cta" id="btnRematch">קרב חוזר</button>
+            <button class="mega-btn primary-cta" id="btnNextStage">לשלב הבא</button>
+            <button class="mega-btn btn-blue" id="btnResultEdit">חזקו את החפיסה</button>
+            <button class="mega-btn btn-orange" id="btnRematch">קרב חוזר</button>
             <button class="mega-btn btn-ghost" id="btnHome">חזרה למסך הבית</button>
         </div>
     </div>

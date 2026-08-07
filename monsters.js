@@ -191,6 +191,54 @@ function monsterSVG(a, cls = '') {
     </svg>`;
 }
 
+/* ============================================================================
+   מפת השלבים — 10 קרבות מול יריבים עם חפיסות משלהם
+   כל חפיסה: { מזהה קלף: מספר עותקים }, בדיוק 20 קלפים, עד 3 עותקים.
+   הקושי עולה בהדרגה גם בעוצמת החפיסה וגם בסינרגיה של היכולות.
+   ============================================================================ */
+
+const STAGES = [
+    { n: 1,  name: 'שוליית הזירה',  title: 'המתחיל',        img: 'art/swamp-crawler.jpg', el: 'green',
+      taunt: 'רק התחלתי להתאמן. אולי תלך לי בקלות?',
+      deck: { 20:3, 19:3, 18:3, 17:3, 16:3, 15:3, 14:2 } },
+
+    { n: 2,  name: 'לוחש הביצות',   title: 'מרעיל',         img: 'art/poison-spore.jpg', el: 'green',
+      taunt: 'הנבגים שלי יכרסמו בכוח שלך.',
+      deck: { 20:3, 15:3, 17:3, 12:3, 16:3, 13:3, 18:2 } },
+
+    { n: 3,  name: 'אמן הסופה',     title: 'מטעין',         img: 'art/thunder-orb.jpg', el: 'gold',
+      taunt: 'הזעם שלי מכפיל את עצמו. אתה מוכן?',
+      deck: { 19:3, 13:3, 6:2, 16:3, 12:2, 14:3, 10:2, 18:2 } },
+
+    { n: 4,  name: 'נזירת הקרח',    title: 'מקפיאה',        img: 'art/ice-dragoness.jpg', el: 'blue',
+      taunt: 'אקפיא את המפלצות שלך לפני שיספיקו לנשום.',
+      deck: { 5:3, 3:2, 14:3, 16:3, 15:2, 10:3, 12:2, 19:2 } },
+
+    { n: 5,  name: 'צייד החולות',   title: 'הטורף',         img: 'art/sand-shark.jpg', el: 'gold',
+      taunt: 'החול בולע את החלשים. אתה נראה חלש.',
+      deck: { 13:3, 9:3, 10:3, 14:2, 12:2, 6:2, 16:2, 2:1, 17:2 } },
+
+    { n: 6,  name: 'לוחש הצללים',   title: 'הגנב',          img: 'art/shadow-orb.jpg', el: 'purple',
+      taunt: 'כל קלף שתשלוף — אקח לעצמי.',
+      deck: { 18:3, 10:3, 8:3, 11:2, 12:2, 4:2, 7:2, 1:1, 19:2 } },
+
+    { n: 7,  name: 'מפקד הברזל',    title: 'הבלתי מנוצח',   img: 'art/iron-vanguard.jpg', el: 'orange',
+      taunt: 'השריון שלי לא נשבר. גם לא בתיקו.',
+      deck: { 9:3, 3:3, 14:3, 16:3, 10:2, 6:2, 2:2, 12:2 } },
+
+    { n: 8,  name: 'רוזן הדם',      title: 'מנקז הכוח',     img: 'art/blood-knight.jpg', el: 'red',
+      taunt: 'כל טיפת כוח שלך — תהיה שלי.',
+      deck: { 7:3, 8:3, 4:3, 2:2, 11:2, 12:2, 10:2, 18:3 } },
+
+    { n: 9,  name: 'מכשף התהום',    title: 'מבטל היכולות',  img: 'art/abyss-mage.jpg', el: 'purple',
+      taunt: 'היכולות שלך חסרות משמעות מולי.',
+      deck: { 11:3, 12:3, 4:3, 13:2, 6:3, 10:2, 3:2, 8:2 } },
+
+    { n: 10, name: 'עריץ הזירה',    title: 'אלוף הזירה',    img: 'art/dark-fist.jpg', el: 'red',
+      taunt: 'הזירה הזאת שלי. תמיד הייתה.',
+      deck: { 1:3, 2:3, 3:3, 4:3, 7:2, 6:2, 5:2, 9:2 } }
+];
+
 /* ---------------- 20 המפלצות ---------------- */
 /* לכל מפלצת: שם, כוח, יכולת, אלמנט (צבע המסגרת) וציור */
 
@@ -213,6 +261,7 @@ const CARD_POOL = [
       art: { body: 'tall', c1: '#D9D6E0', c2: '#5B4FCF', eyes: 2, eyeStyle: 'glow', horns: 'crown', mouth: 'grin', extra: 'aura', front: 'none' } },
 
     { id: 5, name: 'דרקונית הקרח', power: 7, ability: 'weaken', el: 'blue',
+      img: 'art/ice-dragoness.jpg', imgPos: 'center 12%',
       art: { body: 'beast', c1: '#4E7FD6', c2: '#BFE4FF', eyes: 2, eyeStyle: 'slit', horns: 'twin', mouth: 'fangs', extra: 'wings', front: 'belly' } },
 
     { id: 6, name: 'נזיר הסופה', power: 7, ability: 'boost', el: 'blue',
@@ -224,6 +273,7 @@ const CARD_POOL = [
       art: { body: 'tall', c1: '#2A1620', c2: '#D4324E', eyes: 2, eyeStyle: 'glow', horns: 'crown', mouth: 'grin', extra: 'aura', front: 'plates' } },
 
     { id: 8, name: 'ערפד הליל', power: 6, ability: 'vampire', el: 'purple',
+      img: 'art/night-vampire.jpg', imgPos: 'center 14%',
       art: { body: 'tall', c1: '#3B3468', c2: '#C24E7A', eyes: 2, eyeStyle: 'angry', horns: 'ears', mouth: 'fangs', extra: 'wings', front: 'none' } },
 
     { id: 9, name: 'חלוץ הברזל', power: 6, ability: 'tie', el: 'orange',
@@ -243,6 +293,7 @@ const CARD_POOL = [
       art: { body: 'tall', c1: '#2C2740', c2: '#C24E7A', eyes: 2, eyeStyle: 'glow', horns: 'none', mouth: 'grin', extra: 'aura', front: 'none' } },
 
     { id: 13, name: 'כרישון החול', power: 5, ability: 'boost', el: 'gold',
+      img: 'art/sand-shark.jpg', imgPos: 'center 16%',
       art: { body: 'wide', c1: '#C99A2E', c2: '#5A3F12', eyes: 2, eyeStyle: 'angry', horns: 'none', mouth: 'grin', extra: 'tail', front: 'belly' } },
 
     { id: 14, name: 'שומר התכלת', power: 5, ability: 'shield', el: 'blue',
@@ -250,20 +301,26 @@ const CARD_POOL = [
       art: { body: 'tall', c1: '#1E3A6E', c2: '#4FC8FF', eyes: 2, eyeStyle: 'glow', horns: 'none', mouth: 'grin', extra: 'aura', front: 'plates' } },
 
     { id: 15, name: 'פטריון רעל', power: 4, ability: 'weaken', el: 'green',
+      img: 'art/poison-spore.jpg', imgPos: 'center 40%',
       art: { body: 'dome', c1: '#2FBE85', c2: '#12432F', eyes: 2, eyeStyle: 'glow', horns: 'none', mouth: 'tiny', extra: 'none', front: 'spots' } },
 
     { id: 16, name: 'פנטום הערפל', power: 4, ability: 'tie', el: 'blue',
+      img: 'art/mist-phantom.jpg', imgPos: 'center 30%',
       art: { body: 'ghost', c1: '#7E90B5', c2: '#DCE7FA', eyes: 2, eyeStyle: 'glow', horns: 'none', mouth: 'maw', extra: 'aura', front: 'none' } },
 
     { id: 17, name: 'גור הלבה', power: 4, ability: 'underdog', el: 'red',
+      img: 'art/lava-cub.jpg', imgPos: 'center 40%',
       art: { body: 'beast', c1: '#952B23', c2: '#F5A623', eyes: 2, eyeStyle: 'angry', horns: 'twin', mouth: 'fangs', extra: 'none', front: 'spots' } },
 
     { id: 18, name: 'שדון הצללים', power: 3, ability: 'steal', el: 'purple',
+      img: 'art/shadow-imp.jpg', imgPos: 'center 28%',
       art: { body: 'blob', c1: '#2C2740', c2: '#9C4394', eyes: 3, eyeStyle: 'glow', horns: 'ears', mouth: 'grin', extra: 'none', front: 'none' } },
 
     { id: 19, name: 'בועת הרעם', power: 3, ability: 'boost', el: 'gold',
+      img: 'art/thunder-orb.jpg', imgPos: 'center 40%',
       art: { body: 'dome', c1: '#E0C24E', c2: '#4A3A08', eyes: 1, eyeStyle: 'angry', horns: 'antenna', mouth: 'zigzag', extra: 'shards', front: 'none' } },
 
     { id: 20, name: 'זוחל הביצה', power: 2, ability: 'underdog', el: 'green',
+      img: 'art/swamp-crawler.jpg', imgPos: 'center 38%',
       art: { body: 'wide', c1: '#3E7A3A', c2: '#B6E86B', eyes: 3, eyeStyle: 'slit', horns: 'none', mouth: 'zigzag', extra: 'tail', front: 'belly' } }
 ];

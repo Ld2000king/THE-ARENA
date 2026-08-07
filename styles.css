@@ -52,6 +52,7 @@
     --glow-cyan: 0 8px 22px rgba(58, 101, 184, 0.22), var(--shadow-depth-sm);
     --glow-green: 0 8px 22px rgba(22, 135, 82, 0.22), var(--shadow-depth-sm);
     --glow-gold: 0 8px 22px rgba(168, 127, 34, 0.22), var(--shadow-depth-sm);
+    --glow-orange: 0 8px 22px rgba(176, 101, 31, 0.22), var(--shadow-depth-sm);
     --glow-purple: 0 8px 22px rgba(74, 63, 176, 0.22), var(--shadow-depth-sm);
     --glow-red: 0 8px 22px rgba(149, 43, 35, 0.22), var(--shadow-depth-sm);
 
@@ -192,6 +193,7 @@ button, [role="button"], .clickable { touch-action: manipulation; }
 }
 .btn-purple { background: var(--grad-purple); box-shadow: var(--glow-purple); }
 .btn-blue { background: var(--grad-blue); box-shadow: var(--glow-cyan); }
+.btn-orange { background: var(--grad-orange); box-shadow: var(--glow-orange); }
 .btn-ghost {
     background: var(--surface-2);
     color: var(--text-dark);
@@ -594,6 +596,91 @@ button, [role="button"], .clickable { touch-action: manipulation; }
     25%     { transform: rotateY(180deg) translateX(-7px) }
     75%     { transform: rotateY(180deg) translateX(7px) }
 }
+
+/* ============================================================================
+   STAGE MAP
+   ============================================================================ */
+#mapScreen {
+    padding: calc(10px + var(--safe-top)) calc(14px + var(--safe-right))
+             calc(12px + var(--safe-bottom)) calc(14px + var(--safe-left));
+    gap: 10px;
+}
+.progress-chip {
+    min-width: 56px; text-align: center;
+    font-family: var(--font-display); font-weight: 800; font-size: 15px;
+    color: var(--text-dark);
+    background: var(--surface-2);
+    border-radius: 13px; padding: 10px 8px;
+    box-shadow: var(--shadow-depth-sm);
+}
+
+.stage-list {
+    flex: 1; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 10px;
+    padding-bottom: 6px;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+}
+
+.stage-row {
+    position: relative;
+    display: flex; align-items: center; gap: 12px;
+    width: 100%; border: none; text-align: start;
+    background: var(--panel-light);
+    border-radius: var(--radius-card);
+    padding: 10px 12px;
+    box-shadow: var(--shadow-depth-md);
+    cursor: pointer;
+    font-family: var(--font-body);
+    transition: transform .15s var(--spring), filter .15s ease, box-shadow .2s ease;
+}
+.stage-row:active { transform: scale(.965) translateY(1px); filter: brightness(.9); }
+.stage-row:focus-visible { outline: 3px solid #8FB4EE; outline-offset: 3px; }
+.stage-row.locked { opacity: .45; filter: grayscale(.8); cursor: default; }
+.stage-row.open {
+    background: linear-gradient(145deg, rgba(22,135,82,.20), rgba(28,30,36,0) 62%), var(--panel-light);
+    box-shadow: var(--glow-green);
+}
+.stage-row.done .stage-state { color: #4ED89B; }
+.stage-row.open .stage-state { color: var(--text-dark); }
+.stage-row.locked .stage-state { color: var(--text-secondary); }
+
+.stage-num {
+    flex: none; width: 30px;
+    font-family: var(--font-display); font-weight: 900; font-size: 20px;
+    color: var(--text-secondary);
+    text-align: center;
+}
+.stage-row.open .stage-num { color: #4ED89B; }
+.stage-row.done .stage-num { color: var(--text-dark); }
+
+.stage-art {
+    flex: none; width: 58px; height: 58px;
+    border-radius: 16px; overflow: hidden;
+    background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--el) 34%, transparent), transparent 72%), var(--surface-2);
+    box-shadow: var(--shadow-depth-sm);
+}
+.stage-art img { width: 100%; height: 100%; object-fit: cover; object-position: center 22%; display: block; }
+
+.stage-info { flex: 1; min-width: 0; }
+.stage-name { font-family: var(--font-display); font-weight: 700; font-size: 16px; color: var(--text-dark); }
+.stage-title { font-size: 12.5px; color: var(--text-secondary); margin-top: 1px; }
+.stage-power {
+    font-size: 12px; color: var(--text-secondary); margin-top: 3px;
+    font-variant-numeric: tabular-nums;
+}
+
+.stage-state { flex: none; width: 30px; display: grid; place-items: center; }
+.stage-state svg {
+    width: 22px; height: 22px;
+    fill: none; stroke: currentColor; stroke-width: 2.2;
+    stroke-linecap: round; stroke-linejoin: round;
+}
+.stage-row.open .stage-state svg { fill: currentColor; stroke: none; }
+
+/* אווטאר היריב בקרב — תמונה במקום ציור */
+.avatar-img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; border-radius: 15px; display: block; }
 
 /* ============================================================================
    DECK EDITOR

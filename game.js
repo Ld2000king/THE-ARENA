@@ -7,6 +7,7 @@ const $ = id => document.getElementById(id);
 const DECK_SIZE = 20;
 const MAX_COPIES = 3;
 const STORE_KEY = 'zira-deck-v1';
+const PROGRESS_KEY = 'zira-progress-v1';
 
 const S = {
     playerDeck: [],
@@ -16,6 +17,9 @@ const S = {
     knockouts: 0,
     war: null,                 // { pileP: [], pileE: [], depth: 1 } כשמצב מלחמה פעיל
     counts: {},                // תצורת החפיסה של השחקן: { cardId: copies }
+    mode: 'quick',             // 'quick' = קרב מהיר, 'campaign' = שלב במפה
+    stageIdx: null,            // אינדקס השלב כשמשחקים במפה
+    cleared: 0,                // מספר השלבים שהושלמו
     stats: { wins: 0, losses: 0, wars: 0 }
 };
 
@@ -57,6 +61,19 @@ function loadCounts() {
 
 function saveCounts(counts) {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(counts)); } catch (e) { /* אין אחסון */ }
+}
+
+/* ---- התקדמות במפת השלבים ---- */
+function loadProgress() {
+    try {
+        const n = parseInt(localStorage.getItem(PROGRESS_KEY), 10);
+        if (Number.isFinite(n) && n >= 0) return Math.min(n, STAGES.length);
+    } catch (e) { /* אין אחסון */ }
+    return 0;
+}
+
+function saveProgress(n) {
+    try { localStorage.setItem(PROGRESS_KEY, String(n)); } catch (e) { /* אין אחסון */ }
 }
 
 /* בונה חפיסה מעורבבת מתוך תצורת עותקים */
@@ -422,13 +439,45 @@ function endGame() {
     const playerWon = S.playerDeck.length > 0;
     S.war = null;
     $('warBanner').classList.remove('on');
+
+    const stage = S.mode === 'campaign' ? STAGES[S.stageIdx] : null;
+    let unlockedNext = false;
+
+    if (stage && playerWon && S.cleared < stage.n) {
+        S.cleared = stage.n;          // השלב הושלם — נפתח השלב הבא
+        saveProgress(S.cleared);
+        unlockedNext = true;
+    }
+
     $('resultEmblem').className = 'result-emblem ' + (playerWon ? 'win' : 'lose');
     $('resultEmblem').innerHTML = playerWon ? TROPHY : SKULL;
-    $('resultTitle').textContent = playerWon ? 'הזירה שלכם!' : 'הובסתם';
-    $('resultSub').textContent = (playerWon
-        ? 'ליריב נגמרו הקלפים. אתם שולטים בזירה.'
-        : 'החפיסה שלכם התרוקנה. הזירה עברה ליריב.')
-        + ` ${S.knockouts} מפלצות הודחו לאורך ${S.round - 1} סיבובים.`;
+
+    if (stage) {
+        $('resultTitle').textContent = playerWon ? `שלב ${stage.n} הושלם!` : `${stage.name} ניצח`;
+    } else {
+        $('resultTitle').textContent = playerWon ? 'הזירה שלכם!' : 'הובסתם';
+    }
+
+    const isLast = stage && stage.n === STAGES.length;
+    let sub;
+    if (stage && playerWon) {
+        sub = isLast
+            ? 'הבסתם את עריץ הזירה. סיימתם את כל 10 השלבים!'
+            : (unlockedNext ? `${stage.name} הובס. שלב ${stage.n + 1} נפתח.` : `${stage.name} הובס שוב.`);
+    } else if (stage) {
+        sub = `${stage.name} עוד חזק מדי. נסו לשנות את החפיסה ולחזור.`;
+    } else {
+        sub = playerWon ? 'ליריב נגמרו הקלפים. אתם שולטים בזירה.'
+                        : 'החפיסה שלכם התרוקנה. הזירה עברה ליריב.';
+    }
+    $('resultSub').textContent = sub + ` ${S.knockouts} מפלצות הודחו לאורך ${S.round - 1} סיבובים.`;
+
+    // "לשלב הבא" מוצג רק כשיש שלב הבא שנפתח
+    const hasNext = stage && playerWon && !isLast;
+    $('btnNextStage').style.display = hasNext ? '' : 'none';
+    // אחרי הפסד בשלב — קיצור ישיר לעורך החפיסה, כי זו הדרך האמיתית להתקדם
+    $('btnResultEdit').style.display = (stage && !playerWon) ? '' : 'none';
+    $('btnRematch').textContent = stage ? 'שחקו שוב בשלב' : 'קרב חוזר';
     $('resultStats').innerHTML = `
         <div class="stat-tile"><div class="stat-val">${S.stats.wins}</div><div class="stat-lbl">סיבובים שניצחתם</div></div>
         <div class="stat-tile"><div class="stat-val">${S.stats.losses}</div><div class="stat-lbl">סיבובים שהפסדתם</div></div>
@@ -444,9 +493,21 @@ function show(id) {
     $(id).classList.add('active');
 }
 
-function startGame() {
+/* stageIdx = אינדקס שלב במפה, או null לקרב מהיר */
+function startGame(stageIdx = null) {
+    S.mode = stageIdx === null ? 'quick' : 'campaign';
+    S.stageIdx = stageIdx;
+    const stage = stageIdx === null ? null : STAGES[stageIdx];
+
     S.playerDeck = deckFromCounts(S.counts, 'p');
-    S.enemyDeck = deckFromCounts(enemyCounts(countsPower(S.counts)), 'e');
+    S.enemyDeck = deckFromCounts(stage ? stage.deck : enemyCounts(countsPower(S.counts)), 'e');
+
+    // זהות היריב — שם ואווטאר לפי השלב, או יריב גנרי בקרב מהיר
+    $('enemyName').textContent = stage ? `${stage.n}. ${stage.name}` : 'היריב';
+    $('enemyAvatar').innerHTML = stage
+        ? `<img class="avatar-img" src="${stage.img}" alt="">`
+        : monsterSVG({ body: 'spiky', c1: '#B3372E', c2: '#F0C24A', eyes: 2, eyeStyle: 'angry', horns: 'twin', mouth: 'fangs', extra: 'none', front: 'none' });
+
     S.round = 1;
     S.busy = false;
     S.war = null;
@@ -462,10 +523,49 @@ function startGame() {
     $('vsBadge').textContent = 'VS';
     $('warBanner').classList.remove('on');
     setDrawButton('שלוף!', false);
-    setVerdict('הזירה פתוחה', 'לחצו "שלוף!" כדי לחשוף את הקלפים העליונים', '');
+    setVerdict(stage ? `שלב ${stage.n} — ${stage.name}` : 'הזירה פתוחה',
+               stage ? stage.taunt : 'לחצו "שלוף!" כדי לחשוף את הקלפים העליונים', '');
     updateBars(false);
     $('resultOverlay').classList.remove('open');
     show('gameScreen');
+}
+
+/* ---------------- מפת השלבים ---------------- */
+
+const ICON_LOCK = `<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>`;
+const ICON_CHECK = `<svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>`;
+const ICON_PLAY = `<svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg>`;
+
+function deckPower(deck) {
+    return Object.entries(deck).reduce((sum, [id, n]) => sum + byId(+id).power * n, 0);
+}
+
+function buildMap() {
+    $('progressLabel').textContent = `${S.cleared}/${STAGES.length}`;
+    $('stageList').innerHTML = STAGES.map((s, i) => {
+        const done = s.n <= S.cleared;
+        const open = s.n === S.cleared + 1;
+        const state = done ? 'done' : (open ? 'open' : 'locked');
+        const icon = done ? ICON_CHECK : (open ? ICON_PLAY : ICON_LOCK);
+        return `<button class="stage-row ${state}" data-i="${i}" ${done || open ? '' : 'disabled'}>
+            <div class="stage-num">${s.n}</div>
+            <div class="stage-art el-${s.el}"><img src="${s.img}" alt=""></div>
+            <div class="stage-info">
+                <div class="stage-name">${s.name}</div>
+                <div class="stage-title">${s.title}</div>
+                <div class="stage-power">כוח חפיסה ${deckPower(s.deck)}</div>
+            </div>
+            <div class="stage-state">${icon}</div>
+        </button>`;
+    }).join('');
+}
+
+function openMap() {
+    buildMap();
+    show('mapScreen');
+    // גוללים לשלב הפתוח כדי שלא יצטרכו לחפש אותו
+    const next = $('stageList').querySelector('.stage-row.open');
+    if (next) next.scrollIntoView({ block: 'center' });
 }
 
 /* ---------------- עריכת החפיסה ---------------- */
@@ -551,6 +651,7 @@ function buildLegend() {
 
 document.addEventListener('DOMContentLoaded', () => {
     S.counts = loadCounts();
+    S.cleared = loadProgress();
 
     // לוגו המשחק; אם הקובץ חסר נופלים חזרה למפלצת המצוירת
     $('crest').innerHTML = `<img class="crest-img" src="art/logo.jpg" alt="הזירה"
@@ -561,11 +662,34 @@ document.addEventListener('DOMContentLoaded', () => {
     buildCodex();
     buildLegend();
 
-    $('btnPlay').addEventListener('click', startGame);
+    // מעטפת חשובה: מאזין מעביר את אובייקט האירוע כארגומנט, ולכן קוראים במפורש
+    $('btnPlay').addEventListener('click', () => startGame(null));
     $('btnDraw').addEventListener('click', drawRound);
-    $('btnRematch').addEventListener('click', startGame);
-    $('btnHome').addEventListener('click', () => { $('resultOverlay').classList.remove('open'); show('homeScreen'); });
-    $('btnQuit').addEventListener('click', () => show('homeScreen'));
+    $('btnRematch').addEventListener('click', () => startGame(S.stageIdx));
+    $('btnHome').addEventListener('click', () => {
+        $('resultOverlay').classList.remove('open');
+        S.mode === 'campaign' ? openMap() : show('homeScreen');
+    });
+    $('btnQuit').addEventListener('click', () => (S.mode === 'campaign' ? openMap() : show('homeScreen')));
+
+    // מפת השלבים
+    $('btnCampaign').addEventListener('click', openMap);
+    $('btnMapBack').addEventListener('click', () => show('homeScreen'));
+    $('btnNextStage').addEventListener('click', () => {
+        $('resultOverlay').classList.remove('open');
+        const next = S.stageIdx + 1;
+        next < STAGES.length ? startGame(next) : openMap();
+    });
+    $('btnResultEdit').addEventListener('click', () => {
+        $('resultOverlay').classList.remove('open');
+        openEditor();
+    });
+    $('stageList').addEventListener('click', e => {
+        const row = e.target.closest('.stage-row');
+        if (!row || row.disabled) return;
+        $('resultOverlay').classList.remove('open');
+        startGame(+row.dataset.i);
+    });
     $('btnCodex').addEventListener('click', () => show('codexScreen'));
     document.querySelector('.codex-back').addEventListener('click', () => show('homeScreen'));
 
@@ -582,7 +706,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (countsTotal(draftCounts) !== DECK_SIZE) return;
         S.counts = { ...draftCounts };
         saveCounts(S.counts);
-        startGame();
+        // שמירה מחזירה למקום שממנו הגיעו, ולא זורקת אתכם לקרב מהיר
+        S.mode === 'campaign' ? openMap() : show('homeScreen');
     });
 
     // חוקים
