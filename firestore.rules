@@ -1,0 +1,28 @@
+rules_version = '2';
+
+// כללי אבטחה עבור THE-ARENA (the-arena-game).
+// אני לא יכול לפרוס את הקובץ הזה בעצמי — אין לי הרשאת פריסה לפרויקט,
+// רק את מפתח ה-Web API הציבורי. יש להדביק את התוכן הזה ידנית ב:
+// Firebase Console -> Firestore Database -> Rules -> Publish
+//
+// עד שהקובץ הזה יודבק ויפורסם, מסד הנתונים פתוח לכתיבה מכל אחד
+// באינטרנט (אומת בפועל: כתיבה בלי התחברות הצליחה בבדיקה).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // עריכות הקלפים הגלובליות: כולם קוראים (כדי שכל שחקן יראה את
+    // הגרסה העדכנית), רק חשבון האדמין הספציפי כותב.
+    match /gameConfig/cardOverrides {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.auth.token.email == 'ld2000@thearena.local';
+    }
+
+    // כל נתיב אחר חסום כברירת מחדל — הגנה נוספת, לא רק הסתמכות
+    // על ברירת המחדל של Firestore.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

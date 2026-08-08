@@ -1053,6 +1053,211 @@ function buildLegend() {
         </div>`).join('');
 }
 
+/* ---------------- אדמין: עריכת קלפים גלובלית ---------------- */
+
+/* נקרא מתוך economy.js (setAdminSessionActive) בכל שינוי במצב ההתחברות */
+function onAdminSessionChanged(active) {
+    refreshCurrency();
+    $('btnAdminTools').hidden = !active;
+    // אם התנתקנו בזמן שמסך הכלים פתוח — חוזרים הביתה, אין מה לערוך בלי הרשאה
+    if (!active && $('adminToolsScreen').classList.contains('active')) show('homeScreen');
+    syncAdminLoginView();
+}
+
+/* מציג את טופס ההתחברות או את מסך "מחוברים" בהתאם למצב הנוכחי */
+function syncAdminLoginView() {
+    const active = typeof isAdminSession === 'function' && isAdminSession();
+    $('adminLoginForm').hidden = active;
+    $('adminLoggedInInfo').hidden = !active;
+}
+
+function openAdminLogin() {
+    $('adminUserInput').value = '';
+    $('adminPassInput').value = '';
+    $('adminLoginError').hidden = true;
+    syncAdminLoginView();
+    $('adminLoginOverlay').classList.add('open');
+}
+
+async function submitAdminLogin() {
+    const err = $('adminLoginError');
+    err.hidden = true;
+    if (!window.FirebaseAdmin) {
+        err.textContent = 'אין חיבור לשרת האדמין כרגע';
+        err.hidden = false;
+        return;
+    }
+    const user = $('adminUserInput').value;
+    const pass = $('adminPassInput').value;
+    const btn = $('btnAdminLogin');
+    btn.disabled = true;
+    try {
+        await window.FirebaseAdmin.login(user, pass);
+        // onAuthStateChanged יפעיל את onAdminSessionChanged; רק מציגים הצלחה
+        toast('התחברת בתור אדמין');
+        syncAdminLoginView();
+    } catch (e) {
+        err.textContent = e.message === 'SETUP_REQUIRED'
+            ? 'יש להפעיל קודם Authentication בקונסולת Firebase (Email/Password)'
+            : e.message;
+        err.hidden = false;
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function submitAdminLogout() {
+    if (window.FirebaseAdmin) await window.FirebaseAdmin.logout();
+    $('adminLoginOverlay').classList.remove('open');
+    toast('התנתקת ממצב אדמין');
+}
+
+/* ---- רשימת הקלפים לעריכה ---- */
+
+function buildAdminCardList() {
+    $('adminCardList').innerHTML = CARD_POOL.map(card => {
+        const ab = ABILITIES[card.ability];
+        return `<div class="edit-row" data-id="${card.id}">
+            ${miniArt(card)}
+            <div class="edit-info">
+                <div class="edit-name">${card.name}${card.variant ? ` <span class="variant-tag">${card.variant}</span>` : ''}
+                    ${card._hasOverride ? '<span class="admin-override-tag">נערך</span>' : ''}</div>
+                <div class="edit-ab ab-${ab.tone}">
+                    <svg viewBox="0 0 24 24">${ab.icon}</svg><span>${ab.name} · כוח ${card.power} · מחיר ${cardPrice(card)}</span>
+                </div>
+            </div>
+            <button class="admin-edit-btn" data-id="${card.id}">ערוך</button>
+        </div>`;
+    }).join('');
+}
+
+let adminEditingId = null;
+
+function openAdminEditSheet(id) {
+    const card = byId(id);
+    if (!card) return;
+    adminEditingId = card.id;
+
+    $('adminEditPreview').innerHTML = artHTML(card);
+    $('adminEditName').value = card.name;
+    $('adminEditPower').value = card.power;
+    $('adminEditPrice').value = Number.isFinite(card.priceOverride) ? card.priceOverride : '';
+
+    const sel = $('adminEditAbility');
+    sel.innerHTML = Object.entries(ABILITIES).map(([key, ab]) => `<option value="${key}">${ab.name}</option>`).join('');
+    sel.value = card.ability;
+
+    $('adminEditError').hidden = true;
+    $('adminEditStatus').hidden = true;
+    $('adminEditOverlay').classList.add('open');
+}
+
+async function saveAdminEdit() {
+    const errEl = $('adminEditError'), statusEl = $('adminEditStatus');
+    errEl.hidden = true; statusEl.hidden = true;
+
+    const name = $('adminEditName').value.trim();
+    const power = Number($('adminEditPower').value);
+    const ability = $('adminEditAbility').value;
+    const priceRaw = $('adminEditPrice').value.trim();
+
+    if (!name || name.length > 24) return showAdminErr('שם הקלף חייב להיות בין 1 ל-24 תווים');
+    if (!Number.isFinite(power) || power < 1 || power > 20) return showAdminErr('כוח חייב להיות מספר בין 1 ל-20');
+    if (!ABILITIES[ability]) return showAdminErr('יכולת לא תקינה');
+    let priceOverride = null;
+    if (priceRaw) {
+        priceOverride = Number(priceRaw);
+        if (!Number.isFinite(priceOverride) || priceOverride < 1) return showAdminErr('מחיר חייב להיות מספר חיובי, או ריק לברירת מחדל');
+    }
+
+    if (!window.FirebaseAdmin) return showAdminErr('אין חיבור לשרת');
+    statusEl.textContent = 'שומר...'; statusEl.hidden = false;
+    $('btnAdminEditSave').disabled = true;
+    try {
+        await window.FirebaseAdmin.saveCardOverride(adminEditingId, { name, power, ability, priceOverride });
+        statusEl.textContent = 'נשמר — מתעדכן אצל כל השחקנים';
+        toast('הקלף עודכן גלובלית');
+        setTimeout(() => $('adminEditOverlay').classList.remove('open'), 500);
+    } catch (e) {
+        showAdminErr('שמירה נכשלה: ' + e.message);
+    } finally {
+        $('btnAdminEditSave').disabled = false;
+    }
+
+    function showAdminErr(msg) { errEl.textContent = msg; errEl.hidden = false; statusEl.hidden = true; }
+}
+
+async function resetAdminEdit() {
+    if (!window.FirebaseAdmin || adminEditingId == null) return;
+    $('btnAdminEditReset').disabled = true;
+    try {
+        await window.FirebaseAdmin.resetCardOverride(adminEditingId);
+        toast('הקלף אופס לברירת המחדל');
+        $('adminEditOverlay').classList.remove('open');
+    } catch (e) {
+        $('adminEditError').textContent = 'איפוס נכשל: ' + e.message;
+        $('adminEditError').hidden = false;
+    } finally {
+        $('btnAdminEditReset').disabled = false;
+    }
+}
+
+/* ---- קליטת עדכונים גלובליים מ-Firestore ---- */
+
+/* מוחל בכל פעם שמגיע מסמך overrides חדש (כולל בזמן אמת, מכל שחקן).
+   מייצר בעצם CARD_POOL "חי" — כל מי שמסתכל על byId(id) רואה את
+   הערכים המעודכנים, בלי לשנות אף call site קיים בקוד. */
+function applyCardOverrides(data) {
+    if (!data || typeof data !== 'object') return;
+    let changed = false;
+    for (const card of CARD_POOL) {
+        const ov = data[String(card.id)];
+        const hadOverride = !!card._hasOverride;
+        if (!ov) {
+            if (hadOverride) { resetCardToBase(card); changed = true; }
+            continue;
+        }
+        if (typeof ov.name === 'string' && ov.name.trim() && ov.name.length <= 24 && card.name !== ov.name.trim()) {
+            card.name = ov.name.trim(); changed = true;
+        }
+        if (Number.isFinite(ov.power) && ov.power >= 1 && ov.power <= 20 && card.power !== ov.power) {
+            card.power = ov.power; changed = true;
+        }
+        if (typeof ov.ability === 'string' && ABILITIES[ov.ability] && card.ability !== ov.ability) {
+            card.ability = ov.ability; changed = true;
+        }
+        const priceVal = Number.isFinite(ov.priceOverride) && ov.priceOverride > 0 ? ov.priceOverride : undefined;
+        if (card.priceOverride !== priceVal) { card.priceOverride = priceVal; changed = true; }
+        if (!hadOverride) { card._hasOverride = true; changed = true; }
+    }
+    if (changed) refreshVisibleScreens();
+}
+
+/* שומרים את הערכים המקוריים של כל קלף בטעינה הראשונה, כדי שאיפוס
+   (מחיקת override ב-Firestore) יחזיר בדיוק לערך שהיה ב-monsters.js */
+let _cardBaseline = null;
+function captureCardBaseline() {
+    _cardBaseline = new Map(CARD_POOL.map(c => [c.id, { name: c.name, power: c.power, ability: c.ability }]));
+}
+function resetCardToBase(card) {
+    const base = _cardBaseline && _cardBaseline.get(card.id);
+    if (base) { card.name = base.name; card.power = base.power; card.ability = base.ability; }
+    delete card.priceOverride;
+    card._hasOverride = false;
+}
+
+/* מרענן כל מסך שכרגע גלוי ומציג נתוני קלפים, כדי שעריכה גלובלית
+   תיראה מייד גם אצל שחקנים שכבר באמצע גלישה במסך */
+function refreshVisibleScreens() {
+    const active = document.querySelector('.screen.active');
+    if (!active) return;
+    if (active.id === 'shopScreen') buildShop();
+    else if (active.id === 'codexScreen') buildCodex();
+    else if (active.id === 'editScreen') renderEditor();
+    else if (active.id === 'mapScreen') buildMap();
+    else if (active.id === 'adminToolsScreen') buildAdminCardList();
+}
+
 /* ---------------- שם השחקן ---------------- */
 
 function openNameScreen(first) {
@@ -1081,6 +1286,7 @@ function saveName() {
 
 document.addEventListener('DOMContentLoaded', () => {
     P = loadProfile();
+    captureCardBaseline();
 
     $('crest').innerHTML = `<img class="crest-img" src="art/logo.jpg" alt="הזירה"
         onerror="this.remove(); document.getElementById('crest').innerHTML = monsterSVG(CARD_POOL[0].art);">`;
@@ -1089,6 +1295,18 @@ document.addEventListener('DOMContentLoaded', () => {
     buildCodex();
     buildLegend();
     refreshCurrency();
+
+    // מנוי לעריכות קלפים גלובליות מ-Firestore. firebase-init.js טעון עם
+    // async כדי שלעולם לא יעכב את עליית המשחק, ולכן אי אפשר להניח
+    // ש-window.FirebaseAdmin כבר קיים כאן — מחכים לאירוע המוכנות שלו,
+    // ואם הוא כבר הספיק לטעון (למשל מהמטמון) פשוט משתמשים בו מיד.
+    if (window.FirebaseAdmin) {
+        window.FirebaseAdmin.subscribeCardOverrides(applyCardOverrides);
+    } else {
+        window.addEventListener('firebaseAdminReady', () => {
+            if (window.FirebaseAdmin) window.FirebaseAdmin.subscribeCardOverrides(applyCardOverrides);
+        }, { once: true });
+    }
 
     // ניווט ראשי
     $('btnCampaign').addEventListener('click', openMap);
@@ -1180,12 +1398,38 @@ document.addEventListener('DOMContentLoaded', () => {
     $('btnNameSkip').addEventListener('click', () => show('homeScreen'));
     $('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') saveName(); });
 
-    // חוקים
+    // חלונות פשוטים (חוקים, התחברות אדמין, עריכת קלף): כל כפתור .close-overlay
+    // סוגר את החלון הכי קרוב לו, ולחיצה על הרקע סוגרת גם היא. resultOverlay
+    // ו-rewardOverlay לא בכלל הזה בכוונה — לכפתורי הסגירה שלהם יש ניווט משלהם
+    // (openMap/show/וכו'), וסגירה מהרקע הייתה מדלגת על הניווט ומשאירה מסך תקוע.
     document.querySelectorAll('.close-overlay').forEach(b =>
-        b.addEventListener('click', () => $('rulesOverlay').classList.remove('open')));
-    $('rulesOverlay').addEventListener('click', e => {
-        if (e.target === $('rulesOverlay')) $('rulesOverlay').classList.remove('open');
+        b.addEventListener('click', () => b.closest('.overlay').classList.remove('open')));
+    ['rulesOverlay', 'adminLoginOverlay', 'adminEditOverlay'].forEach(id => {
+        $(id).addEventListener('click', e => { if (e.target === $(id)) $(id).classList.remove('open'); });
     });
+
+    // אדמין: התחברות, כלים ועריכת קלף
+    $('btnAdminMode').addEventListener('click', openAdminLogin);
+    $('btnAdminLogin').addEventListener('click', submitAdminLogin);
+    $('adminPassInput').addEventListener('keydown', e => { if (e.key === 'Enter') submitAdminLogin(); });
+    $('btnAdminLogout').addEventListener('click', submitAdminLogout);
+
+    const openToolsFromOverlay = () => {
+        $('adminLoginOverlay').classList.remove('open');
+        buildAdminCardList();
+        show('adminToolsScreen');
+    };
+    $('btnAdminToolsFromLogin').addEventListener('click', openToolsFromOverlay);
+    $('btnAdminTools').addEventListener('click', () => { buildAdminCardList(); show('adminToolsScreen'); });
+    $('btnAdminToolsBack').addEventListener('click', () => show('homeScreen'));
+
+    $('adminCardList').addEventListener('click', e => {
+        const btn = e.target.closest('.admin-edit-btn');
+        if (!btn) return;
+        openAdminEditSheet(+btn.dataset.id);
+    });
+    $('btnAdminEditSave').addEventListener('click', saveAdminEdit);
+    $('btnAdminEditReset').addEventListener('click', resetAdminEdit);
 
     // מסך פתיחה: בחירת שם בהרצה ראשונה
     if (!P.name) openNameScreen(true); else show('homeScreen');

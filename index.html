@@ -65,6 +65,10 @@
                     <button class="mega-btn btn-ghost" id="btnCodex">אוסף</button>
                     <button class="mega-btn btn-ghost" id="btnRules">חוקים</button>
                 </div>
+                <div class="btn-row">
+                    <button class="mega-btn btn-admin" id="btnAdminMode">מצב אדמין</button>
+                    <button class="mega-btn btn-admin-tools" id="btnAdminTools" hidden>כלי אדמין</button>
+                </div>
             </div>
         </div>
     </section>
@@ -204,6 +208,23 @@
         </div>
     </section>
 
+    <!-- ==================== כלי אדמין: עריכת קלפים גלובלית ==================== -->
+    <section id="adminToolsScreen" class="screen">
+        <header class="top-bar">
+            <button class="icon-btn btn-red-soft" id="btnAdminToolsBack" aria-label="חזרה">
+                <svg viewBox="0 0 24 24"><path d="M6 6 L18 18 M18 6 L6 18"/></svg>
+            </button>
+            <div class="round-chip">כלי אדמין</div>
+            <span style="width:40px"></span>
+        </header>
+        <div class="admin-status-row">
+            <div class="admin-status-chip on">כסף ויהלומים אינסופיים ✓</div>
+            <div class="admin-status-chip on">כל הקלפים בבעלות ✓</div>
+        </div>
+        <p class="screen-hint" id="adminSyncHint">עריכת קלף כאן משפיעה על <b>כל השחקנים</b>, בזמן אמת.</p>
+        <div class="edit-list" id="adminCardList"></div>
+    </section>
+
     <!-- ==================== אוסף המפלצות ==================== -->
     <section id="codexScreen" class="screen">
         <header class="top-bar">
@@ -254,6 +275,60 @@
         </div>
     </div>
 
+    <div class="overlay" id="adminLoginOverlay">
+        <div class="sheet">
+            <h2 class="sheet-title">מצב אדמין</h2>
+
+            <div id="adminLoginForm">
+                <input id="adminUserInput" class="name-input" type="text"
+                       placeholder="שם משתמש" autocomplete="off" spellcheck="false">
+                <input id="adminPassInput" class="name-input" type="password"
+                       placeholder="סיסמה" autocomplete="off">
+                <p class="admin-hint" id="adminLoginError" hidden></p>
+                <button class="mega-btn btn-admin" id="btnAdminLogin">התחברות</button>
+            </div>
+
+            <div id="adminLoggedInInfo" hidden>
+                <p class="admin-hint ok">מחוברים כאדמין ✓ כסף אינסופי וכל הקלפים פעילים בדפדפן הזה.</p>
+                <button class="mega-btn btn-admin-tools" id="btnAdminToolsFromLogin">כלי אדמין</button>
+                <button class="mega-btn btn-ghost" id="btnAdminLogout">התנתקות</button>
+            </div>
+
+            <button class="mega-btn btn-ghost close-overlay">סגירה</button>
+        </div>
+    </div>
+
+    <div class="overlay" id="adminEditOverlay">
+        <div class="sheet">
+            <h2 class="sheet-title">עריכת קלף</h2>
+            <div class="admin-edit-preview" id="adminEditPreview"></div>
+
+            <label class="admin-field">
+                <span>שם הקלף</span>
+                <input id="adminEditName" class="name-input" type="text" maxlength="24" autocomplete="off">
+            </label>
+            <label class="admin-field">
+                <span>רמת כוח</span>
+                <input id="adminEditPower" class="name-input" type="number" min="1" max="20" step="1">
+            </label>
+            <label class="admin-field">
+                <span>יכולת</span>
+                <select id="adminEditAbility" class="name-input admin-select"></select>
+            </label>
+            <label class="admin-field">
+                <span>מחיר בחנות (ריק = לפי נדירות אוטומטית)</span>
+                <input id="adminEditPrice" class="name-input" type="number" min="1" step="1" placeholder="אוטומטי">
+            </label>
+
+            <p class="admin-hint" id="adminEditError" hidden></p>
+            <p class="admin-hint" id="adminEditStatus" hidden></p>
+
+            <button class="mega-btn btn-admin" id="btnAdminEditSave">שמירה — משפיע על כל השחקנים</button>
+            <button class="mega-btn btn-orange" id="btnAdminEditReset">איפוס לברירת המחדל</button>
+            <button class="mega-btn btn-ghost close-overlay">ביטול</button>
+        </div>
+    </div>
+
     <div class="overlay" id="rewardOverlay">
         <div class="sheet">
             <h2 class="sheet-title" id="rewardTitle">התיבה נפתחה!</h2>
@@ -270,5 +345,9 @@
 <script src="monsters.js"></script>
 <script src="economy.js"></script>
 <script src="game.js"></script>
+<!-- async: לעולם לא חוסם את עליית המשחק, גם אם CDN של Firebase איטי
+     או לא נגיש. game.js לא מניח שזה כבר טעון — הוא מחכה לאירוע
+     firebaseAdminReady (ראו firebase-init.js) -->
+<script type="module" async src="firebase-init.js"></script>
 </body>
 </html>

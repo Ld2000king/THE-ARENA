@@ -37,8 +37,10 @@ function rarityOf(card) {
     return 'common';
 }
 
+/* מחיר הקלף בחנות: מחיר שהאדמין קבע ידנית לקלף הזה גובר על
+   המחיר הנגזר מהנדירות. priceOverride מגיע מ-Firestore. */
 function cardPrice(card) {
-    return RARITIES[rarityOf(card)].price;
+    return Number.isFinite(card.priceOverride) ? card.priceOverride : RARITIES[rarityOf(card)].price;
 }
 
 /* ---------------- תיבות ---------------- */
@@ -143,8 +145,23 @@ function blankProfile() {
     };
 }
 
+/* מצב אדמין מנותק לגמרי משם השחקן — הוא נקבע רק דרך התחברות
+   אמיתית ב-Firebase Authentication (ראו firebase-init.js).
+   הדגל הזה גלובלי ולא נשמר, כדי שסגירת הדפדפן תוציא מהמצב
+   (Firebase עצמו עדיין זוכר את ההתחברות ומשחזר אותה ב-onAuthStateChanged). */
+let _adminSessionActive = false;
+
+function setAdminSessionActive(v) {
+    _adminSessionActive = !!v;
+    // הוק אופציונלי שמוגדר ב-game.js כדי לרענן את הממשק כשמצב האדמין משתנה
+    if (typeof onAdminSessionChanged === 'function') onAdminSessionChanged(_adminSessionActive);
+}
+
+function isAdminSession() { return _adminSessionActive; }
+
+// profile נשאר בחתימה כדי לא לשנות אף call site קיים; כבר לא נבדק בפועל
 function isAdmin(profile) {
-    return (profile.name || '').trim().toLowerCase() === ADMIN_NAME;
+    return _adminSessionActive;
 }
 
 /* לאדמין אין מגבלת מטבעות ויהלומים */
