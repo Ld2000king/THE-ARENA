@@ -367,5 +367,49 @@ const CARD_POOL = [
 
     { id: 20, name: 'זוחל הביצה', power: 2, ability: 'underdog', el: 'green',
       img: 'art/swamp-crawler.jpg', imgPos: 'center 38%',
-      art: { body: 'wide', c1: '#3E7A3A', c2: '#B6E86B', eyes: 3, eyeStyle: 'slit', horns: 'none', mouth: 'zigzag', extra: 'tail', front: 'belly' } }
+      art: { body: 'wide', c1: '#3E7A3A', c2: '#B6E86B', eyes: 3, eyeStyle: 'slit', horns: 'none', mouth: 'zigzag', extra: 'tail', front: 'belly' } },
+
+    /* ---- גל שני: לוחמי הזירה ---- */
+
+    { id: 21, name: 'עריץ החלל', power: 10, ability: 'nullify', el: 'purple',
+      img: 'art/void-tyrant.jpg', imgPos: 'center 22%',
+      art: { body: 'spiky', c1: '#4A2A5E', c2: '#E060E8', eyes: 3, eyeStyle: 'glow', horns: 'crown', mouth: 'maw', extra: 'aura', front: 'plates' } },
+
+    { id: 22, name: 'מונרך השמש', power: 10, ability: 'boost', el: 'gold',
+      img: 'art/sun-monarch.jpg', imgPos: 'center 14%',
+      art: { body: 'tall', c1: '#D9A82E', c2: '#FFF0A8', eyes: 2, eyeStyle: 'glow', horns: 'crown', mouth: 'grin', extra: 'aura', front: 'plates' } },
+
+    { id: 23, name: 'משמיד הוורד', power: 9, ability: 'vampire', el: 'pink',
+      img: 'art/rose-destroyer.jpg', imgPos: 'center 12%',
+      art: { body: 'tall', c1: '#2A1C33', c2: '#F58AB8', eyes: 2, eyeStyle: 'angry', horns: 'none', mouth: 'grin', extra: 'aura', front: 'none' } },
+
+    { id: 24, name: 'מלך הסאיאן', power: 9, ability: 'boost', el: 'blue',
+      img: 'art/saiyan-king.jpg', imgPos: 'center 20%',
+      art: { body: 'tall', c1: '#8E2036', c2: '#5FD8FF', eyes: 2, eyeStyle: 'angry', horns: 'none', mouth: 'grin', extra: 'aura', front: 'plates' } },
+
+    { id: 25, name: 'שומר הליל', power: 8, ability: 'shield', el: 'blue',
+      img: 'art/night-warden.jpg', imgPos: 'center 22%',
+      art: { body: 'beast', c1: '#242B3E', c2: '#E8C24A', eyes: 2, eyeStyle: 'glow', horns: 'twin', mouth: 'grin', extra: 'wings', front: 'plates' } },
+
+    { id: 26, name: 'טיטאן פריים', power: 8, ability: 'tie', el: 'red',
+      img: 'art/titan-prime.jpg', imgPos: 'center 12%',
+      art: { body: 'tall', c1: '#B3232E', c2: '#4FA8FF', eyes: 2, eyeStyle: 'glow', horns: 'twin', mouth: 'none', extra: 'aura', front: 'plates' } },
+
+    { id: 27, name: 'רץ הזמן', power: 7, ability: 'steal', el: 'red',
+      img: 'art/chrono-racer.jpg', imgPos: 'center 20%',
+      art: { body: 'tall', c1: '#B32E3E', c2: '#8F7BF5', eyes: 2, eyeStyle: 'angry', horns: 'none', mouth: 'grin', extra: 'aura', front: 'none' } },
+
+    { id: 28, name: 'זקיף הסופה', power: 7, ability: 'weaken', el: 'orange',
+      img: 'art/storm-sentinel.jpg', imgPos: 'center 20%',
+      art: { body: 'tall', c1: '#2E3A5E', c2: '#F5A02E', eyes: 2, eyeStyle: 'glow', horns: 'none', mouth: 'none', extra: 'aura', front: 'plates' } },
+
+    /* שני הקלפים הבאים חולקים שם — אותה דמות בשתי פוזות, ויכולות שונות.
+       זהו הזוג היחיד במשחק עם שם זהה, ולכן שדה variant מבדיל ביניהם. */
+    { id: 29, name: 'קשתית האמרלד', variant: 'עמידת מגן', power: 6, ability: 'shield', el: 'green',
+      img: 'art/ranger-guard.jpg', imgPos: 'center 18%',
+      art: { body: 'tall', c1: '#1F5E42', c2: '#6BF5A0', eyes: 2, eyeStyle: 'glow', horns: 'none', mouth: 'none', extra: 'aura', front: 'plates' } },
+
+    { id: 30, name: 'קשתית האמרלד', variant: 'זינוק תקיפה', power: 6, ability: 'underdog', el: 'green',
+      img: 'art/ranger-strike.jpg', imgPos: 'center 20%',
+      art: { body: 'tall', c1: '#1F5E42', c2: '#9BFF6B', eyes: 2, eyeStyle: 'angry', horns: 'none', mouth: 'none', extra: 'wings', front: 'none' } }
 ];

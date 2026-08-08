@@ -105,7 +105,7 @@ function cardFrontHTML(card) {
             <div class="rar-badge rar-${rar}">${RARITIES[rar].name}</div>
             ${artHTML(card)}
         </div>
-        <div class="card-name">${card.name}</div>
+        <div class="card-name">${card.name}${card.variant ? `<span class="card-variant">${card.variant}</span>` : ''}</div>
         ${abilityChip(card.ability)}
     </div>`;
 }
@@ -702,7 +702,7 @@ function buildShop() {
                 ${artHTML(card)}
                 ${ownedN ? `<div class="own-badge">×${ownedN}</div>` : ''}
             </div>
-            <div class="shop-name">${card.name}</div>
+            <div class="shop-name">${card.name}${card.variant ? `<span class="card-variant">${card.variant}</span>` : ''}</div>
             <div class="shop-rar rar-${rar}">${RARITIES[rar].name}</div>
             <button class="shop-buy${dis ? ' disabled' : ''}" data-id="${card.id}" ${dis ? 'disabled' : ''}>
                 ${maxed ? 'מלא (3)' : `<span class="coin-ico"></span>${price}`}
@@ -881,7 +881,7 @@ function renderEditor() {
         return `<div class="edit-row${n ? '' : ' empty'}" data-id="${card.id}">
             ${miniArt(card)}
             <div class="edit-info">
-                <div class="edit-name">${card.name} <span class="own-note">בבעלות ${own}</span></div>
+                <div class="edit-name">${card.name}${card.variant ? ` <span class="variant-tag">${card.variant}</span>` : ''} <span class="own-note">בבעלות ${own}</span></div>
                 <div class="edit-ab ab-${ab.tone}">
                     <svg viewBox="0 0 24 24">${ab.icon}</svg><span>${ab.name} · ${ab.desc}</span>
                 </div>
