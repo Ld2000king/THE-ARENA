@@ -13,6 +13,8 @@ const S = {
     playerDiscard: [], enemyDiscard: [],
     playerHand: [], enemyHand: [],
     battleMode: 'quick',    // 'quick' = שליפה אוטומטית | 'monsters' = בחירה מהיד
+    pendingSummon: null,    // { index, sacrifices[] } בזמן בחירת קורבנות
+    sacrificeNote: '',
     playerHP: START_HP, enemyHP: START_HP, enemyMaxHP: START_HP,
     round: 1,
     busy: false,
@@ -177,27 +179,11 @@ function resolveRound(pCard, eCard, noAbilities = false) {
 
 /* ---------------- תצוגת הקרב ---------------- */
 
-/* שולף קלף. כשהחפיסה נגמרת מערבבים את ערימת ההשלכה וממשיכים.
-   מחזיר null רק אם גם החפיסה וגם ההשלכה ריקות — מצב שקורה כשמלחמה
-   ארוכה מחזיקה את כל הקלפים בערימה שעל השולחן. */
+/* שולף קלף מהחפיסה. אין ערבוב מחדש — חפיסה שנגמרה היא תנאי הפסד,
+   ולכן כל קלף שנשרף (בשליחה לקרב או בהקרבה) הוא משאב אבוד. */
 function drawCard(side) {
     const deck = side === 'p' ? S.playerDeck : S.enemyDeck;
-    const disc = side === 'p' ? S.playerDiscard : S.enemyDiscard;
-    if (!deck.length && disc.length) {
-        deck.push(...shuffle(disc));
-        disc.length = 0;
-    }
     return deck.length ? deck.shift() : null;
-}
-
-/* אף צד לא יכול להמשיך — מכריעים לפי נקודות החיים */
-function endByHP() {
-    if (S.playerHP === S.enemyHP) S.enemyHP -= 1;   // שובר שוויון לטובת השחקן
-    if (S.playerHP > S.enemyHP) S.enemyHP = 0; else S.playerHP = 0;
-    S.war = null;
-    $('warBanner').classList.remove('on');
-    setVerdict('הקלפים אזלו', 'שני הצדדים נשארו בלי קלפים — ההכרעה לפי נקודות החיים', '');
-    endGame();
 }
 
 function updateBars(anim) {
@@ -253,6 +239,7 @@ function floatDamage(side, amount, kind) {
 
 /* ---- יד הקלפים (קרב מפלצות) ---- */
 
+/* מילוי היד בתחילת הקרב בלבד */
 function refillHand(side) {
     const hand = side === 'p' ? S.playerHand : S.enemyHand;
     while (hand.length < HAND_SIZE) {
@@ -262,16 +249,46 @@ function refillHand(side) {
     }
 }
 
-/* הבוט בוחר מהיד: כשהוא בחיים נמוכים הוא הולך על החזק ביותר,
-   אחרת הוא מגוון כדי לא להיות צפוי */
+/* האם קיים בכלל מהלך חוקי ביד?
+   יד שכולה כוח 6+ ובה פחות מ-3 קלפים לא מאפשרת שום זימון, ובלי
+   הבדיקה הזאת השחקן היה נתקע בלי מהלך אפשרי. */
+function hasLegalPlay(hand) {
+    if (!hand.length) return false;
+    if (hand.length - 1 >= SACRIFICE_COUNT) return true;
+    return hand.some(c => !needsSacrifice(c));
+}
+
+const needsSacrifice = card => card.power >= SACRIFICE_MIN_POWER;
+
+/* הבוט בוחר מהיד ומשלם את אותו מחיר הקרבה כמו השחקן.
+   בחיים נמוכים הוא הולך על החזק ביותר, אחרת מגוון כדי לא להיות צפוי. */
 function botPick() {
-    if (!S.enemyHand.length) refillHand('e');
     if (!S.enemyHand.length) return null;
     const sorted = [...S.enemyHand].sort((a, b) => b.power - a.power);
+    const canPaySac = S.enemyHand.length - 1 >= SACRIFICE_COUNT;
+
+    /* זימון יקר שורף 3 קלפים מהחפיסה, וחפיסה שנגמרה היא הפסד.
+       בלי השמירה הזאת הבוט שרף את עצמו והמצב היה נשלט בקלות. */
+    const deckThin = S.enemyDeck.length <= (SACRIFICE_COUNT + 1) * 2;
+    const allowBig = canPaySac && !deckThin;
+
+    let pool = sorted.filter(c => !needsSacrifice(c) || allowBig);
+    if (!pool.length) pool = sorted.filter(c => !needsSacrifice(c));
+    if (!pool.length) pool = sorted;
+
     const desperate = S.enemyHP <= S.enemyMaxHP * 0.4;
-    const pick = desperate ? sorted[0]
-        : (Math.random() < 0.55 ? sorted[0] : sorted[Math.min(1, sorted.length - 1)]);
+    const pick = desperate ? pool[0]
+        : (Math.random() < 0.55 ? pool[0] : pool[Math.min(1, pool.length - 1)]);
+
     S.enemyHand.splice(S.enemyHand.indexOf(pick), 1);
+    if (needsSacrifice(pick)) {
+        // הבוט מקריב את החלשים שנותרו לו
+        [...S.enemyHand].sort((a, b) => a.power - b.power).slice(0, SACRIFICE_COUNT)
+            .forEach(c => {
+                S.enemyHand.splice(S.enemyHand.indexOf(c), 1);
+                S.enemyDiscard.push(c);
+            });
+    }
     return pick;
 }
 
@@ -279,14 +296,27 @@ function renderHand() {
     const dock = $('handDock');
     if (S.battleMode !== 'monsters') { dock.hidden = true; return; }
     dock.hidden = false;
-    $('handRow').innerHTML = S.playerHand.map((c, i) => `
-        <button class="hand-card el-${c.el} rar-${rarityOf(c)}" data-i="${i}" ${S.busy ? 'disabled' : ''}
+    const pend = S.pendingSummon;
+
+    $('handRow').innerHTML = S.playerHand.map((c, i) => {
+        const chosen = pend && pend.index === i;
+        const sac = pend && pend.sacrifices.includes(i);
+        return `<button class="hand-card el-${c.el} rar-${rarityOf(c)}${chosen ? ' chosen' : ''}${sac ? ' sacrificed' : ''}"
+                data-i="${i}" ${S.busy ? 'disabled' : ''}
                 title="${c.name} · ${ABILITIES[c.ability].name}">
             <div class="hand-art${c.img ? ' has-img' : ''}">${artHTML(c)}</div>
+            ${needsSacrifice(c) ? `<div class="sac-cost">${SACRIFICE_COUNT}</div>` : ''}
             <div class="hand-pow">${c.power}</div>
-        </button>`).join('');
-    $('handLabel').textContent = S.busy ? 'הקלפים נחשפים...'
-        : (S.war ? 'בחרו את הקלף המכריע' : 'בחרו קלף לזימון');
+        </button>`;
+    }).join('');
+
+    if (S.busy) $('handLabel').textContent = 'הקלפים נחשפים...';
+    else if (pend) {
+        const left = SACRIFICE_COUNT - pend.sacrifices.length;
+        $('handLabel').textContent = `בחרו עוד ${left} להקרבה · לחיצה חוזרת מבטלת`;
+    } else $('handLabel').textContent = S.war
+        ? 'בחרו את הקלף המכריע' : `בחרו קלף לזימון · כוח ${SACRIFICE_MIN_POWER}+ עולה ${SACRIFICE_COUNT} הקרבות`;
+    $('handLabel').classList.toggle('warn', !!pend);
 }
 
 /* ---- כניסה לסיבוב ---- */
@@ -296,18 +326,56 @@ function drawRound() {
     if (S.busy || S.battleMode === 'monsters') return;
     const pCard = drawCard('p');
     const eCard = drawCard('e');
-    if (!pCard || !eCard) { endByHP(); return; }
+    if (!pCard || !eCard) { endGame(); return; }
     revealAndResolve(pCard, eCard);
 }
 
-/* קרב מפלצות: השחקן בוחר קלף מהיד */
+/* קרב מפלצות: השחקן בוחר קלף מהיד.
+   קלף בכוח SACRIFICE_MIN_POWER ומעלה דורש בחירת קורבנות לפני הזימון. */
 function playFromHand(i) {
     if (S.busy || S.battleMode !== 'monsters') return;
-    const pCard = S.playerHand[i];
-    if (!pCard) return;
+    const card = S.playerHand[i];
+    if (!card) return;
+    const pend = S.pendingSummon;
+
+    if (pend) {
+        if (pend.index === i) { S.pendingSummon = null; renderHand(); return; }   // ביטול
+        const at = pend.sacrifices.indexOf(i);
+        if (at >= 0) pend.sacrifices.splice(at, 1); else pend.sacrifices.push(i);
+        if (pend.sacrifices.length >= SACRIFICE_COUNT) commitSummon(pend.index, pend.sacrifices);
+        else renderHand();
+        return;
+    }
+
+    if (needsSacrifice(card)) {
+        if (S.playerHand.length - 1 < SACRIFICE_COUNT) {
+            // אין קורבנות. אם גם אין שום מהלך חוקי אחר — מזמנים בחינם כדי לא להיתקע
+            if (!hasLegalPlay(S.playerHand)) {
+                toast('אין קלפים להקרבה — הזימון עובר בחינם');
+                return commitSummon(i, []);
+            }
+            return toast(`זימון ${card.name} דורש ${SACRIFICE_COUNT} הקרבות — בחרו קלף חלש יותר`);
+        }
+        S.pendingSummon = { index: i, sacrifices: [] };
+        renderHand();
+        return;
+    }
+
+    commitSummon(i, []);
+}
+
+function commitSummon(index, sacIdx) {
+    const pCard = S.playerHand[index];
+    const sacrificed = sacIdx.map(k => S.playerHand[k]);
+    const remove = new Set([index, ...sacIdx]);
+    S.playerHand = S.playerHand.filter((_, k) => !remove.has(k));
+    S.playerDiscard.push(...sacrificed);
+    S.pendingSummon = null;
+    S.sacrificeNote = sacrificed.length
+        ? `הוקרבו: ${sacrificed.map(c => c.name).join(' · ')}` : '';
+
     const eCard = botPick();
-    if (!eCard) { endByHP(); return; }
-    S.playerHand.splice(i, 1);
+    if (!eCard) { endGame(); return; }
     revealAndResolve(pCard, eCard);
 }
 
@@ -414,6 +482,7 @@ function finishRound(pCard, eCard) {
         $('warBanner').classList.remove('on');
     }
 
+    if (S.sacrificeNote) { extra.push(S.sacrificeNote); S.sacrificeNote = ''; }
     setVerdict(
         playerWon ? `פגעתם! ${dmg} נזק` : `ספגתם ${dmg} נזק`,
         `${r.pPow} מול ${r.ePow}<br>${[notes, ...extra].join(' · ')}`,
@@ -432,6 +501,8 @@ function endRound() {
     setTimeout(() => {
         if (S.playerHP <= 0 || S.enemyHP <= 0) { endGame(); return; }
         if (S.battleMode === 'monsters') { refillHand('p'); refillHand('e'); }
+        // תנאי הפסד שני: חפיסה שנגמרה
+        if (!S.playerDeck.length || !S.enemyDeck.length) { endGame(); return; }
         S.busy = false;
         $('btnDraw').disabled = false;
         renderHand();
@@ -489,7 +560,7 @@ function warDecider() {
     if (S.busy || S.battleMode === 'monsters') return;
     const pCard = drawCard('p');
     const eCard = drawCard('e');
-    if (!pCard || !eCard) { endByHP(); return; }
+    if (!pCard || !eCard) { endGame(); return; }
     revealAndResolve(pCard, eCard);
 }
 
@@ -503,7 +574,18 @@ const SKULL = `<svg viewBox="0 0 24 24" fill="none" stroke="#F0928A" stroke-widt
     <circle cx="9" cy="11" r="1.8"/><circle cx="15" cy="11" r="1.8"/><path d="M11 16h2"/></svg>`;
 
 function endGame() {
-    const playerWon = S.enemyHP <= 0 && S.playerHP > 0;
+    // שני תנאי סיום: נקודות חיים או חפיסה שנגמרה
+    let playerWon, reason;
+    const pOut = !S.playerDeck.length, eOut = !S.enemyDeck.length;
+    if (S.playerHP <= 0 && S.enemyHP <= 0) { playerWon = S.playerHP > S.enemyHP; reason = 'hp'; }
+    else if (S.enemyHP <= 0) { playerWon = true;  reason = 'hp'; }
+    else if (S.playerHP <= 0) { playerWon = false; reason = 'hp'; }
+    else if (pOut && !eOut)   { playerWon = false; reason = 'deck'; }
+    else if (eOut && !pOut)   { playerWon = true;  reason = 'deck'; }
+    else if (pOut && eOut)    { playerWon = S.playerHP > S.enemyHP; reason = 'deck-both'; }
+    else                      { playerWon = S.playerHP > S.enemyHP; reason = 'hp'; }
+
+    S.pendingSummon = null;
     S.war = null;
     $('warBanner').classList.remove('on');
 
@@ -556,6 +638,10 @@ function endGame() {
                      : `${stage.name} הובס.`;
     } else if (stage) {
         sub = `${stage.name} עוד חזק מדי. חזקו את החפיסה ונסו שוב.`;
+    } else if (reason === 'deck') {
+        sub = playerWon ? 'ליריב נגמרו הקלפים בחפיסה.' : 'נגמרו לכם הקלפים בחפיסה.';
+    } else if (reason === 'deck-both') {
+        sub = 'שתי החפיסות נגמרו — ההכרעה לפי נקודות החיים.';
     } else {
         sub = playerWon ? 'היריב נפל. הזירה שלכם.' : 'נקודות החיים שלכם נגמרו.';
     }
@@ -592,6 +678,7 @@ function startGame(stageIdx = null, battleMode = 'quick') {
     S.enemyDeck = deckFromCounts(stage ? stage.deck : enemyCounts(countsPower(P.deck)), 'e');
     S.playerDiscard = []; S.enemyDiscard = [];
     S.playerHand = []; S.enemyHand = [];
+    S.pendingSummon = null; S.sacrificeNote = '';
     if (battleMode === 'monsters') { refillHand('p'); refillHand('e'); }
 
     S.playerHP = START_HP;

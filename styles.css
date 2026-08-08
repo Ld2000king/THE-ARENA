@@ -517,6 +517,38 @@ button, [role="button"], .clickable { touch-action: manipulation; }
 .hand-art.has-img .mon { display: none; }
 .hand-art.img-failed .mon-img { display: none; }
 .hand-art.has-img.img-failed .mon { display: block; }
+.hand-label.warn { color: #EBC65E; }
+
+/* מחיר ההקרבה על קלפים בכוח 6 ומעלה */
+.sac-cost {
+    position: absolute; top: 3px; inset-inline-start: 3px; z-index: 3;
+    min-width: 17px; height: 17px;
+    display: grid; place-items: center;
+    border-radius: 6px;
+    background: var(--grad-red); color: var(--text-dark);
+    font-family: var(--font-display); font-weight: 900; font-size: 11px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.5);
+}
+/* הקלף שנבחר לזימון */
+.hand-card.chosen {
+    outline: 3px solid #EBC65E; outline-offset: -1px;
+    transform: translateY(-6px);
+    box-shadow: 0 10px 24px rgba(235,198,94,.3), var(--shadow-depth-md);
+}
+/* קלף שסומן להקרבה */
+.hand-card.sacrificed {
+    outline: 3px solid var(--neon-red); outline-offset: -1px;
+    filter: grayscale(.65) brightness(.62);
+}
+.hand-card.sacrificed::after {
+    content: '✕';
+    position: absolute; inset: 0; z-index: 4;
+    display: grid; place-items: center;
+    font-size: 26px; font-weight: 900;
+    color: #FF6B5E;
+    text-shadow: 0 2px 8px rgba(0,0,0,.8);
+}
+
 .hand-pow {
     position: absolute; inset-inline: 0; bottom: 0; z-index: 2;
     background: linear-gradient(to top, rgba(8,9,12,.94), rgba(8,9,12,.6) 60%, transparent);
