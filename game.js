@@ -433,9 +433,18 @@ function finishRound(pCard, eCard) {
     $('vsBadge').className = 'vs-badge ' + (playerWon ? 'win' : 'lose');
     $('vsBadge').textContent = playerWon ? '▲' : '▼';
 
-    // ---- נזק = ההפרש בין הקלף המנצח למפסיד ----
-    // מינימום 1: ניצחון ביכולת "עקשן" קורה בהפרש 0, ובלי רצפה הקרב לא היה מתקדם
-    let dmg = Math.max(1, Math.abs(r.pPow - r.ePow));
+    /* נוסחת הנזק שונה בין המצבים:
+       - קרב מהיר: הפרש הכוח בין המנצח למפסיד.
+       - קרב מפלצות: הכוח המלא של המנצח.
+         בקרב מפלצות זימון בכוח 6+ עולה 2 הקרבות (3 קלפים מהחפיסה
+         בסך הכל), וחפיסה שנגמרה היא הפסד. נזק-הפרש הפך קלף חזק
+         לגרוע יותר מקלף חלש — כי מול יריב חזק ההפרש קטן אבל מחיר
+         ההקרבה נשאר קבוע, אז חפיסה "משודרגת" הפסידה כמעט תמיד.
+         נזק מלא הופך קלף חזק לתמיד משתלם ומצדיק את המחיר שלו. */
+    const monstersMode = S.battleMode === 'monsters';
+    let dmg = monstersMode
+        ? (playerWon ? r.pPow : r.ePow)
+        : Math.max(1, Math.abs(r.pPow - r.ePow));
     const extra = [];
 
     const wasWar = !!S.war;
