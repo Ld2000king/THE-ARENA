@@ -230,7 +230,10 @@ button, [role="button"], .clickable { touch-action: manipulation; }
 /* ============================================================================
    HOME
    ============================================================================ */
-#homeScreen { position: relative; overflow: hidden; justify-content: center; }
+/* flex-start ולא center: מרכוז אנכי היה דוחף את שורת ה-HUD למטה
+   ויוצר רווח מת מעל השם/מטבעות/יהלומים. עכשיו התוכן נצמד לחלק
+   העליון, מתחת לפס הסטטוס של המכשיר, והרווח העודף נשאר למטה. */
+#homeScreen { position: relative; overflow: hidden; justify-content: flex-start; }
 #homeScreen::before, #homeScreen::after {
     content: ''; position: absolute;
     width: 460px; height: 460px; border-radius: 50%;
@@ -256,7 +259,7 @@ button, [role="button"], .clickable { touch-action: manipulation; }
     width: 100%;
     max-height: 100%;
     overflow-y: auto;                 /* שסתום ביטחון בטלפונים נמוכים */
-    padding: calc(32px + var(--safe-top)) calc(26px + var(--safe-right))
+    padding: calc(10px + var(--safe-top)) calc(26px + var(--safe-right))
              calc(28px + var(--safe-bottom)) calc(26px + var(--safe-left));
     display: flex; flex-direction: column; align-items: center;
     gap: 10px;
