@@ -1409,6 +1409,7 @@ button, [role="button"], .clickable { touch-action: manipulation; }
 #adminLoginForm[hidden], #adminLoggedInInfo[hidden] { display: none; }
 
 .admin-edit-preview {
+    position: relative;
     width: 90px; height: 90px; margin: 0 auto;
     border-radius: var(--radius-tile); overflow: hidden;
     display: grid; place-items: center;
