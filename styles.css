@@ -929,6 +929,30 @@ button, [role="button"], .clickable { touch-action: manipulation; }
     box-shadow: var(--shadow-depth-sm);
 }
 
+/* מתג מצב הקרב במפה — לכל מצב מסלול התקדמות משלו */
+.mode-tabs {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+    background: var(--panel-light);
+    border-radius: var(--radius-sm);
+    padding: 4px;
+    box-shadow: var(--shadow-depth-sm);
+}
+.mode-tab {
+    border: none; cursor: pointer;
+    border-radius: 11px; padding: 11px 8px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-display); font-weight: 700; font-size: 15px;
+    transition: transform .15s var(--spring), background .2s ease, color .2s ease;
+}
+.mode-tab:active { transform: scale(.95); }
+.mode-tab:focus-visible { outline: 3px solid #8FB4EE; outline-offset: 2px; }
+.mode-tab.active {
+    background: var(--surface-3);
+    color: var(--text-dark);
+    box-shadow: var(--shadow-depth-sm);
+}
+
 .stage-list {
     flex: 1; overflow-y: auto;
     display: flex; flex-direction: column; gap: 10px;

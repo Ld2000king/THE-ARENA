@@ -131,7 +131,8 @@ function blankProfile() {
         gems: 5,
         owned: starterOwned(),
         deck: starterDeck(),
-        cleared: 0,
+        cleared: 0,            // התקדמות במפה בקרב מהיר
+        clearedMonsters: 0,    // התקדמות במפה בקרב מפלצות — נפרדת
         chests: new Array(CHEST_SLOTS).fill(null),  // { type, readyAt } או null
         wins: 0,
         losses: 0
@@ -185,6 +186,7 @@ function loadProfile() {
     out.coins = Number.isFinite(p.coins) ? p.coins : base.coins;
     out.gems  = Number.isFinite(p.gems)  ? p.gems  : base.gems;
     out.cleared = Number.isFinite(p.cleared) ? Math.min(p.cleared, STAGES.length) : 0;
+    out.clearedMonsters = Number.isFinite(p.clearedMonsters) ? Math.min(p.clearedMonsters, STAGES.length) : 0;
     out.wins = Number.isFinite(p.wins) ? p.wins : 0;
     out.losses = Number.isFinite(p.losses) ? p.losses : 0;
 

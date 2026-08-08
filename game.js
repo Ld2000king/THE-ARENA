@@ -18,6 +18,7 @@ const S = {
     busy: false,
     war: null,
     mode: 'quick',          // 'quick' | 'campaign'
+    mapMode: 'quick',       // מצב הקרב שנבחר במפת השלבים
     stageIdx: null,
     stats: { wins: 0, losses: 0, wars: 0, dealt: 0, taken: 0 }
 };
@@ -514,8 +515,10 @@ function endGame() {
         P.coins += COINS_PER_WIN;
         rewards.push(`${COINS_PER_WIN} מטבעות`);
 
-        if (stage && P.cleared < stage.n) {
-            P.cleared = stage.n;
+        // ההתקדמות נזקפת למסלול של מצב הקרב שבו שוחק השלב
+        const key = clearedKey(S.battleMode);
+        if (stage && (P[key] || 0) < stage.n) {
+            P[key] = stage.n;
             P.gems += 2;
             P.coins += FIRST_CLEAR_COINS;
             rewards.push(`${FIRST_CLEAR_COINS} מטבעות ו-2 יהלומים על סיום ראשון`);
@@ -546,9 +549,10 @@ function endGame() {
     }
 
     const isLast = stage && stage.n === STAGES.length;
+    const modeName = S.battleMode === 'monsters' ? 'קרב מפלצות' : 'קרב מהיר';
     let sub;
     if (stage && playerWon) {
-        sub = isLast ? `הבסתם את ${stage.name}. סיימתם את כל ${STAGES.length} השלבים!`
+        sub = isLast ? `הבסתם את ${stage.name}. סיימתם את כל ${STAGES.length} השלבים ב${modeName}!`
                      : `${stage.name} הובס.`;
     } else if (stage) {
         sub = `${stage.name} עוד חזק מדי. חזקו את החפיסה ונסו שוב.`;
@@ -636,11 +640,18 @@ function deckPower(deck) {
     return Object.entries(deck).reduce((sum, [id, n]) => sum + byId(id).power * n, 0);
 }
 
+/* מפתח ההתקדמות תלוי במצב הקרב — לכל מצב מפה משלו */
+function clearedKey(mode) { return mode === 'monsters' ? 'clearedMonsters' : 'cleared'; }
+function clearedIn(mode) { return P[clearedKey(mode)] || 0; }
+
 function buildMap() {
-    $('progressLabel').textContent = `${P.cleared}/${STAGES.length}`;
+    const cleared = clearedIn(S.mapMode);
+    $('progressLabel').textContent = `${cleared}/${STAGES.length}`;
+    document.querySelectorAll('#mapModeTabs .mode-tab').forEach(t =>
+        t.classList.toggle('active', t.dataset.mode === S.mapMode));
     $('stageList').innerHTML = STAGES.map((s, i) => {
-        const done = s.n <= P.cleared;
-        const open = s.n === P.cleared + 1;
+        const done = s.n <= cleared;
+        const open = s.n === cleared + 1;
         const state = done ? 'done' : (open ? 'open' : 'locked');
         const icon = done ? ICON_CHECK : (open ? ICON_PLAY : ICON_LOCK);
         return `<button class="stage-row ${state}" data-i="${i}" ${done || open ? '' : 'disabled'}>
@@ -1028,7 +1039,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const row = e.target.closest('.stage-row');
         if (!row || row.disabled) return;
         $('resultOverlay').classList.remove('open');
-        startGame(+row.dataset.i);
+        startGame(+row.dataset.i, S.mapMode);
+    });
+    $('mapModeTabs').addEventListener('click', e => {
+        const tab = e.target.closest('.mode-tab');
+        if (!tab || tab.dataset.mode === S.mapMode) return;
+        S.mapMode = tab.dataset.mode;
+        openMap();
     });
 
     // חנות
