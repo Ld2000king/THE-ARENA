@@ -53,13 +53,14 @@
             <div class="home-actions">
                 <button class="mega-btn primary-cta" id="btnCampaign">מפת השלבים</button>
                 <div class="btn-row">
+                    <button class="mega-btn btn-pink" id="btnMonsters">קרב מפלצות</button>
+                    <button class="mega-btn btn-orange" id="btnPlay">קרב מהיר</button>
+                </div>
+                <div class="btn-row">
                     <button class="mega-btn btn-gold" id="btnShop">חנות</button>
                     <button class="mega-btn btn-purple" id="btnChests">תיבות</button>
                 </div>
-                <div class="btn-row">
-                    <button class="mega-btn btn-blue" id="btnEdit">ערוך חפיסה</button>
-                    <button class="mega-btn btn-orange" id="btnPlay">קרב מהיר</button>
-                </div>
+                <button class="mega-btn btn-blue" id="btnEdit">ערוך חפיסה</button>
                 <div class="btn-row">
                     <button class="mega-btn btn-ghost" id="btnCodex">אוסף</button>
                     <button class="mega-btn btn-ghost" id="btnRules">חוקים</button>
@@ -120,6 +121,11 @@
                 <div class="deck-count" id="playerCount">20</div>
                 <div class="cards-left"><span id="playerCards">15</span> קלפים</div>
             </div>
+        </div>
+
+        <div class="hand-dock" id="handDock" hidden>
+            <div class="hand-label" id="handLabel">בחרו קלף לזימון</div>
+            <div class="hand-row" id="handRow"></div>
         </div>
 
         <div class="draw-dock">
@@ -217,7 +223,9 @@
                 <li>המפסיד סופג נזק ב<b>גובה ההפרש</b> בין הקלף המנצח למפסיד.</li>
                 <li>לכל קלף <b>יכולת מיוחדת</b> שמשנה את הכוח, את הנזק או את תוצאת הסיבוב.</li>
                 <li>בתיקו נכנסים ל<b>מצב מלחמה</b>: כל צד מניח 2 קלפים הפוכים, ואז נשלף קלף שלישי מכריע — והנזק <b>כפול</b>.</li>
+                <li>בהכרעת מלחמה <b>היכולות מושבתות</b> ומכריע הכוח הבסיסי בלבד. תיקו נוסף מוליד מלחמה נוספת.</li>
                 <li>הקרב נגמר כשלאחד הצדדים <b>נגמרו נקודות החיים</b>.</li>
+                <li><b>קרב מהיר</b>: הקלף העליון נשלף אוטומטית. <b>קרב מפלצות</b>: כל צד מחזיק יד של 5 קלפים ובוחר בעצמו איזה לזמן בכל תור — כולל את הקלף המכריע במלחמה.</li>
                 <li>כל ניצחון מזכה ב-<b>10 מטבעות</b>, וסיום ראשון של שלב ב-<b>50 מטבעות ו-2 יהלומים</b>.</li>
                 <li>במטבעות קונים בחנות קלפים חדשים — עד 3 עותקים מכל קלף.</li>
             </ol>

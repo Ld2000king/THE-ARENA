@@ -11,6 +11,8 @@ let P = null;   // פרופיל השחקן (נטען ב-DOMContentLoaded)
 const S = {
     playerDeck: [], enemyDeck: [],
     playerDiscard: [], enemyDiscard: [],
+    playerHand: [], enemyHand: [],
+    battleMode: 'quick',    // 'quick' = שליפה אוטומטית | 'monsters' = בחירה מהיד
     playerHP: START_HP, enemyHP: START_HP, enemyMaxHP: START_HP,
     round: 1,
     busy: false,
@@ -90,7 +92,7 @@ function artHTML(card) {
 }
 
 function markArtFailed(img) {
-    const box = img.closest('.card-art, .edit-art');
+    const box = img.closest('.card-art, .edit-art, .shop-art, .hand-art');
     if (box) box.classList.add('img-failed');
 }
 
@@ -126,12 +128,21 @@ function layerHTML(card, index, faceUp) {
 
 /* ---------------- חישוב הסיבוב ---------------- */
 
-function resolveRound(pCard, eCard) {
+/* noAbilities: בהכרעת מלחמה היכולות מושבתות ומשווים כוח בסיס בלבד,
+   כך שתיקו בכוח הבסיסי מוליד מלחמה נוספת. */
+function resolveRound(pCard, eCard, noAbilities = false) {
     const notes = [];
 
-    let pAb = pCard.ability, eAb = eCard.ability;
-    if (eAb === 'nullify' && pAb !== 'none') { pAb = 'none'; notes.push(`${eCard.name} ביטל את היכולת שלכם`); }
-    if (pCard.ability === 'nullify' && eAb !== 'none') { eAb = 'none'; notes.push(`${pCard.name} ביטל את יכולת היריב`); }
+    let pAb, eAb;
+    if (noAbilities) {
+        pAb = eAb = 'none';
+        notes.push('הכרעת מלחמה — היכולות מושבתות, מכריע הכוח הבסיסי');
+    } else {
+        pAb = pCard.ability; eAb = eCard.ability;
+        // שני התנאים נבדקים מול היכולת המקורית, כדי ששני "מבטל" יבטלו זה את זה
+        if (eCard.ability === 'nullify' && pAb !== 'none') { pAb = 'none'; notes.push(`${eCard.name} ביטל את היכולת שלכם`); }
+        if (pCard.ability === 'nullify' && eAb !== 'none') { eAb = 'none'; notes.push(`${pCard.name} ביטל את יכולת היריב`); }
+    }
 
     let pPow = pCard.power, ePow = eCard.power;
 
@@ -239,36 +250,100 @@ function floatDamage(side, amount, kind) {
 
 /* ---------------- מהלך הסיבוב ---------------- */
 
+/* ---- יד הקלפים (קרב מפלצות) ---- */
+
+function refillHand(side) {
+    const hand = side === 'p' ? S.playerHand : S.enemyHand;
+    while (hand.length < HAND_SIZE) {
+        const c = drawCard(side);
+        if (!c) break;
+        hand.push(c);
+    }
+}
+
+/* הבוט בוחר מהיד: כשהוא בחיים נמוכים הוא הולך על החזק ביותר,
+   אחרת הוא מגוון כדי לא להיות צפוי */
+function botPick() {
+    if (!S.enemyHand.length) refillHand('e');
+    if (!S.enemyHand.length) return null;
+    const sorted = [...S.enemyHand].sort((a, b) => b.power - a.power);
+    const desperate = S.enemyHP <= S.enemyMaxHP * 0.4;
+    const pick = desperate ? sorted[0]
+        : (Math.random() < 0.55 ? sorted[0] : sorted[Math.min(1, sorted.length - 1)]);
+    S.enemyHand.splice(S.enemyHand.indexOf(pick), 1);
+    return pick;
+}
+
+function renderHand() {
+    const dock = $('handDock');
+    if (S.battleMode !== 'monsters') { dock.hidden = true; return; }
+    dock.hidden = false;
+    $('handRow').innerHTML = S.playerHand.map((c, i) => `
+        <button class="hand-card el-${c.el} rar-${rarityOf(c)}" data-i="${i}" ${S.busy ? 'disabled' : ''}
+                title="${c.name} · ${ABILITIES[c.ability].name}">
+            <div class="hand-art${c.img ? ' has-img' : ''}">${artHTML(c)}</div>
+            <div class="hand-pow">${c.power}</div>
+        </button>`).join('');
+    $('handLabel').textContent = S.busy ? 'הקלפים נחשפים...'
+        : (S.war ? 'בחרו את הקלף המכריע' : 'בחרו קלף לזימון');
+}
+
+/* ---- כניסה לסיבוב ---- */
+
+/* קרב מהיר: הקלף העליון נשלף אוטומטית */
 function drawRound() {
-    if (S.busy) return;
-    if (S.war) { warDecider(); return; }
-
-    S.busy = true;
-    $('btnDraw').disabled = true;
-
+    if (S.busy || S.battleMode === 'monsters') return;
     const pCard = drawCard('p');
     const eCard = drawCard('e');
     if (!pCard || !eCard) { endByHP(); return; }
+    revealAndResolve(pCard, eCard);
+}
 
-    $('playerSlot').innerHTML = layerHTML(pCard, 0, false);
-    $('enemySlot').innerHTML = layerHTML(eCard, 0, false);
-    $('playerPower').innerHTML = '';
-    $('enemyPower').innerHTML = '';
-    $('vsBadge').className = 'vs-badge';
-    $('vsBadge').textContent = 'VS';
-    setVerdict('שולפים...', 'הקלפים נחשפים', '');
+/* קרב מפלצות: השחקן בוחר קלף מהיד */
+function playFromHand(i) {
+    if (S.busy || S.battleMode !== 'monsters') return;
+    const pCard = S.playerHand[i];
+    if (!pCard) return;
+    const eCard = botPick();
+    if (!eCard) { endByHP(); return; }
+    S.playerHand.splice(i, 1);
+    revealAndResolve(pCard, eCard);
+}
+
+/* חשיפה והכרעה — משותף לשני המצבים ולהכרעת מלחמה */
+function revealAndResolve(pCard, eCard) {
+    S.busy = true;
+    $('btnDraw').disabled = true;
+    const isWar = !!S.war;
+
+    if (isWar) {
+        const idx = Math.max(S.war.pileP.length, S.war.pileE.length);
+        $('playerSlot').insertAdjacentHTML('beforeend', layerHTML(pCard, idx, false));
+        $('enemySlot').insertAdjacentHTML('beforeend', layerHTML(eCard, idx, false));
+        setVerdict('הכרעה!', 'הקלף המכריע נחשף — היכולות מושבתות והנזק כפול', 'tie');
+    } else {
+        $('playerSlot').innerHTML = layerHTML(pCard, 0, false);
+        $('enemySlot').innerHTML = layerHTML(eCard, 0, false);
+        $('playerPower').innerHTML = '';
+        $('enemyPower').innerHTML = '';
+        $('vsBadge').className = 'vs-badge';
+        $('vsBadge').textContent = 'VS';
+        setVerdict('נחשפים...', 'הקלפים עולים לזירה', '');
+    }
+    renderHand();
     updateBars(false);
 
     setTimeout(() => {
-        $('playerSlot').querySelector('.card').classList.add('flipped');
-        $('enemySlot').querySelector('.card').classList.add('flipped');
+        $('playerSlot').lastElementChild.querySelector('.card').classList.add('flipped');
+        $('enemySlot').lastElementChild.querySelector('.card').classList.add('flipped');
     }, 200);
 
     setTimeout(() => finishRound(pCard, eCard), 880);
 }
 
 function finishRound(pCard, eCard) {
-    const r = resolveRound(pCard, eCard);
+    // בהכרעת מלחמה היכולות מושבתות — מכריע הכוח הבסיסי בלבד
+    const r = resolveRound(pCard, eCard, !!S.war);
     const pTop = $('playerSlot').lastElementChild;
     const eTop = $('enemySlot').lastElementChild;
 
@@ -354,8 +429,11 @@ function endRound() {
     $('btnDraw').disabled = true;
 
     setTimeout(() => {
-        if (S.playerHP <= 0 || S.enemyHP <= 0) endGame();
-        else { S.busy = false; $('btnDraw').disabled = false; }
+        if (S.playerHP <= 0 || S.enemyHP <= 0) { endGame(); return; }
+        if (S.battleMode === 'monsters') { refillHand('p'); refillHand('e'); }
+        S.busy = false;
+        $('btnDraw').disabled = false;
+        renderHand();
     }, 750);
 }
 
@@ -389,8 +467,9 @@ function startWar(pCard, eCard, r, notes) {
     const dealNext = () => {
         step++;
         if (step > 2) {
-            setDrawButton('שלוף קלף מכריע!', true);
             S.busy = false;
+            if (S.battleMode === 'monsters') { refillHand('p'); refillHand('e'); renderHand(); }
+            else setDrawButton('שלוף קלף מכריע!', true);
             S.round++;
             $('roundNum').textContent = S.round;
             updateBars(true);
@@ -404,27 +483,13 @@ function startWar(pCard, eCard, r, notes) {
     setTimeout(dealNext, 500);
 }
 
+/* הכרעת מלחמה בקרב מהיר — בקרב מפלצות הקלף המכריע נבחר מהיד */
 function warDecider() {
-    if (S.busy) return;
-    S.busy = true;
-    $('btnDraw').disabled = true;
-
+    if (S.busy || S.battleMode === 'monsters') return;
     const pCard = drawCard('p');
     const eCard = drawCard('e');
     if (!pCard || !eCard) { endByHP(); return; }
-    const idx = Math.max(S.war.pileP.length, S.war.pileE.length);
-
-    $('playerSlot').insertAdjacentHTML('beforeend', layerHTML(pCard, idx, false));
-    $('enemySlot').insertAdjacentHTML('beforeend', layerHTML(eCard, idx, false));
-    setVerdict('הכרעה!', 'הקלף המכריע נחשף — הנזק יהיה כפול', 'tie');
-    updateBars(false);
-
-    setTimeout(() => {
-        $('playerSlot').lastElementChild.querySelector('.card').classList.add('flipped');
-        $('enemySlot').lastElementChild.querySelector('.card').classList.add('flipped');
-    }, 200);
-
-    setTimeout(() => finishRound(pCard, eCard), 880);
+    revealAndResolve(pCard, eCard);
 }
 
 /* ---------------- סוף קרב ---------------- */
@@ -513,14 +578,17 @@ function show(id) {
     $(id).classList.add('active');
 }
 
-function startGame(stageIdx = null) {
+function startGame(stageIdx = null, battleMode = 'quick') {
     S.mode = stageIdx === null ? 'quick' : 'campaign';
     S.stageIdx = stageIdx;
+    S.battleMode = battleMode;
     const stage = stageIdx === null ? null : STAGES[stageIdx];
 
     S.playerDeck = deckFromCounts(P.deck, 'p');
     S.enemyDeck = deckFromCounts(stage ? stage.deck : enemyCounts(countsPower(P.deck)), 'e');
     S.playerDiscard = []; S.enemyDiscard = [];
+    S.playerHand = []; S.enemyHand = [];
+    if (battleMode === 'monsters') { refillHand('p'); refillHand('e'); }
 
     S.playerHP = START_HP;
     S.enemyMaxHP = stage ? stage.hp : START_HP;
@@ -546,8 +614,13 @@ function startGame(stageIdx = null) {
     $('vsBadge').textContent = 'VS';
     $('warBanner').classList.remove('on');
     setDrawButton('שלוף!', false);
-    setVerdict(stage ? `שלב ${stage.n} — ${stage.name}` : 'הזירה פתוחה',
-               stage ? stage.taunt : 'הפסד בסיבוב עולה לכם בהפרש הכוח בנקודות חיים', '');
+    $('btnDraw').hidden = battleMode === 'monsters';
+    renderHand();
+    setVerdict(stage ? `שלב ${stage.n} — ${stage.name}` : (battleMode === 'monsters' ? 'קרב מפלצות' : 'הזירה פתוחה'),
+               stage ? stage.taunt
+                     : (battleMode === 'monsters'
+                        ? `כל צד מחזיק ${HAND_SIZE} קלפים ובוחר איזה לזמן בכל תור`
+                        : 'הפסד בסיבוב עולה לכם בהפרש הכוח בנקודות חיים'), '');
     updateBars(false);
     $('resultOverlay').classList.remove('open');
     show('gameScreen');
@@ -912,7 +985,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ניווט ראשי
     $('btnCampaign').addEventListener('click', openMap);
-    $('btnPlay').addEventListener('click', () => startGame(null));
+    $('btnPlay').addEventListener('click', () => startGame(null, 'quick'));
+    $('btnMonsters').addEventListener('click', () => startGame(null, 'monsters'));
+    $('handRow').addEventListener('click', e => {
+        const btn = e.target.closest('.hand-card');
+        if (!btn || btn.disabled) return;
+        playFromHand(+btn.dataset.i);
+    });
     $('btnEdit').addEventListener('click', openEditor);
     $('btnShop').addEventListener('click', () => { buildShop(); show('shopScreen'); });
     $('btnChests').addEventListener('click', openChests);
@@ -930,7 +1009,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // קרב
     $('btnDraw').addEventListener('click', drawRound);
-    $('btnRematch').addEventListener('click', () => startGame(S.stageIdx));
+    $('btnRematch').addEventListener('click', () => startGame(S.stageIdx, S.battleMode));
     $('btnHome').addEventListener('click', () => {
         $('resultOverlay').classList.remove('open');
         S.mode === 'campaign' ? openMap() : show('homeScreen');
@@ -939,7 +1018,7 @@ document.addEventListener('DOMContentLoaded', () => {
     $('btnNextStage').addEventListener('click', () => {
         $('resultOverlay').classList.remove('open');
         const next = S.stageIdx + 1;
-        next < STAGES.length ? startGame(next) : openMap();
+        next < STAGES.length ? startGame(next, S.battleMode) : openMap();
     });
     $('btnResultEdit').addEventListener('click', () => {
         $('resultOverlay').classList.remove('open');

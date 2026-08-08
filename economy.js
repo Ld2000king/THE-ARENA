@@ -6,6 +6,7 @@
 const DECK_SIZE = 15;
 const MAX_COPIES = 3;
 const START_HP = 20;
+const HAND_SIZE = 5;        // גודל היד ב"קרב מפלצות"
 const COINS_PER_WIN = 10;
 const CHEST_SLOTS = 4;
 const ADMIN_NAME = 'ld2000';
