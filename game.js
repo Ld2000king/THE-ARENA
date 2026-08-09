@@ -255,29 +255,31 @@ function refillHand(side) {
 }
 
 /* האם קיים בכלל מהלך חוקי ביד?
-   יד שכולה כוח 6+ ובה פחות מ-3 קלפים לא מאפשרת שום זימון, ובלי
-   הבדיקה הזאת השחקן היה נתקע בלי מהלך אפשרי. */
+   יד שכולה קלפים יקרים ואין בה מספיק קורבנות לאף אחד מהם לא
+   מאפשרת שום זימון, ובלי הבדיקה הזאת השחקן היה נתקע בלי מהלך אפשרי. */
 function hasLegalPlay(hand) {
-    if (!hand.length) return false;
-    if (hand.length - 1 >= SACRIFICE_COUNT) return true;
-    return hand.some(c => !needsSacrifice(c));
+    return hand.some(c => hand.length - 1 >= sacrificeCountFor(c.power));
 }
 
 const needsSacrifice = card => card.power >= SACRIFICE_MIN_POWER;
 
-/* הבוט בוחר מהיד ומשלם את אותו מחיר הקרבה כמו השחקן.
+/* הבוט בוחר מהיד ומשלם את אותו מחיר הקרבה כמו השחקן — מדורג לפי כוח.
    בחיים נמוכים הוא הולך על החזק ביותר, אחרת מגוון כדי לא להיות צפוי. */
 function botPick() {
     if (!S.enemyHand.length) return null;
     const sorted = [...S.enemyHand].sort((a, b) => b.power - a.power);
-    const canPaySac = S.enemyHand.length - 1 >= SACRIFICE_COUNT;
 
-    /* זימון יקר שורף 3 קלפים מהחפיסה, וחפיסה שנגמרה היא הפסד.
+    /* זימון יקר שורף עד 3 קלפים מהחפיסה, וחפיסה שנגמרה היא הפסד.
        בלי השמירה הזאת הבוט שרף את עצמו והמצב היה נשלט בקלות. */
-    const deckThin = S.enemyDeck.length <= (SACRIFICE_COUNT + 1) * 2;
-    const allowBig = canPaySac && !deckThin;
+    const canAfford = c => {
+        const cost = sacrificeCountFor(c.power);
+        if (cost === 0) return true;
+        const canPaySac = S.enemyHand.length - 1 >= cost;
+        const deckThin = S.enemyDeck.length <= (cost + 1) * 2;
+        return canPaySac && !deckThin;
+    };
 
-    let pool = sorted.filter(c => !needsSacrifice(c) || allowBig);
+    let pool = sorted.filter(canAfford);
     if (!pool.length) pool = sorted.filter(c => !needsSacrifice(c));
     if (!pool.length) pool = sorted;
 
@@ -286,9 +288,10 @@ function botPick() {
         : (Math.random() < 0.55 ? pool[0] : pool[Math.min(1, pool.length - 1)]);
 
     S.enemyHand.splice(S.enemyHand.indexOf(pick), 1);
-    if (needsSacrifice(pick)) {
+    const cost = sacrificeCountFor(pick.power);
+    if (cost > 0) {
         // הבוט מקריב את החלשים שנותרו לו
-        [...S.enemyHand].sort((a, b) => a.power - b.power).slice(0, SACRIFICE_COUNT)
+        [...S.enemyHand].sort((a, b) => a.power - b.power).slice(0, cost)
             .forEach(c => {
                 S.enemyHand.splice(S.enemyHand.indexOf(c), 1);
                 S.enemyDiscard.push(c);
@@ -310,17 +313,17 @@ function renderHand() {
                 data-i="${i}" ${S.busy ? 'disabled' : ''}
                 title="${c.name} · ${ABILITIES[c.ability].name}">
             <div class="hand-art${c.img ? ' has-img' : ''}">${artHTML(c)}</div>
-            ${needsSacrifice(c) ? `<div class="sac-cost">${SACRIFICE_COUNT}</div>` : ''}
+            ${needsSacrifice(c) ? `<div class="sac-cost">${sacrificeCountFor(c.power)}</div>` : ''}
             <div class="hand-pow">${c.power}</div>
         </button>`;
     }).join('');
 
     if (S.busy) $('handLabel').textContent = 'הקלפים נחשפים...';
     else if (pend) {
-        const left = SACRIFICE_COUNT - pend.sacrifices.length;
+        const left = sacrificeCountFor(S.playerHand[pend.index].power) - pend.sacrifices.length;
         $('handLabel').textContent = `בחרו עוד ${left} להקרבה · לחיצה חוזרת מבטלת`;
     } else $('handLabel').textContent = S.war
-        ? 'בחרו את הקלף המכריע' : `בחרו קלף לזימון · כוח ${SACRIFICE_MIN_POWER}+ עולה ${SACRIFICE_COUNT} הקרבות`;
+        ? 'בחרו את הקלף המכריע' : `בחרו קלף לזימון · כוח 6-7 = הקרבה אחת, 8-10 = שתיים, 11+ = שלוש`;
     $('handLabel').classList.toggle('warn', !!pend);
 }
 
@@ -336,7 +339,8 @@ function drawRound() {
 }
 
 /* קרב מפלצות: השחקן בוחר קלף מהיד.
-   קלף בכוח SACRIFICE_MIN_POWER ומעלה דורש בחירת קורבנות לפני הזימון. */
+   קלף בכוח SACRIFICE_MIN_POWER ומעלה דורש בחירת קורבנות לפני הזימון —
+   המחיר מדורג לפי sacrificeCountFor(). */
 function playFromHand(i) {
     if (S.busy || S.battleMode !== 'monsters') return;
     const card = S.playerHand[i];
@@ -347,19 +351,21 @@ function playFromHand(i) {
         if (pend.index === i) { S.pendingSummon = null; renderHand(); return; }   // ביטול
         const at = pend.sacrifices.indexOf(i);
         if (at >= 0) pend.sacrifices.splice(at, 1); else pend.sacrifices.push(i);
-        if (pend.sacrifices.length >= SACRIFICE_COUNT) commitSummon(pend.index, pend.sacrifices);
+        const cost = sacrificeCountFor(S.playerHand[pend.index].power);
+        if (pend.sacrifices.length >= cost) commitSummon(pend.index, pend.sacrifices);
         else renderHand();
         return;
     }
 
     if (needsSacrifice(card)) {
-        if (S.playerHand.length - 1 < SACRIFICE_COUNT) {
-            // אין קורבנות. אם גם אין שום מהלך חוקי אחר — מזמנים בחינם כדי לא להיתקע
+        const cost = sacrificeCountFor(card.power);
+        if (S.playerHand.length - 1 < cost) {
+            // אין מספיק קורבנות. אם גם אין שום מהלך חוקי אחר — מזמנים בחינם כדי לא להיתקע
             if (!hasLegalPlay(S.playerHand)) {
                 toast('אין קלפים להקרבה — הזימון עובר בחינם');
                 return commitSummon(i, []);
             }
-            return toast(`זימון ${card.name} דורש ${SACRIFICE_COUNT} הקרבות — בחרו קלף חלש יותר`);
+            return toast(`זימון ${card.name} דורש ${cost} הקרבות — בחרו קלף חלש יותר`);
         }
         S.pendingSummon = { index: i, sacrifices: [] };
         renderHand();

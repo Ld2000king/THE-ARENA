@@ -8,9 +8,15 @@ const MAX_COPIES = 3;
 const START_HP = 20;
 const HAND_SIZE = 5;        // גודל היד ב"קרב מפלצות"
 
-/* בקרב מפלצות: זימון מפלצת בכוח 6 ומעלה דורש הקרבת 2 מפלצות מהיד */
+/* בקרב מפלצות: זימון מפלצת בכוח 6 ומעלה דורש הקרבת מפלצות מהיד —
+   המחיר עולה עם הכוח: 6-7 קורבן אחד, 8-10 שניים, 11+ שלושה */
 const SACRIFICE_MIN_POWER = 6;
-const SACRIFICE_COUNT = 2;
+function sacrificeCountFor(power) {
+    if (power >= 11) return 3;
+    if (power >= 8) return 2;
+    if (power >= SACRIFICE_MIN_POWER) return 1;
+    return 0;
+}
 const COINS_PER_WIN = 10;
 const CHEST_SLOTS = 4;
 const ADMIN_NAME = 'ld2000';
