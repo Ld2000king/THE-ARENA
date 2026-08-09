@@ -118,7 +118,12 @@ const SIGIL = `<svg class="sigil" viewBox="0 0 100 100">
     <circle cx="50" cy="50" r="8"/>
 </svg>`;
 
-const backHTML = () => `<div class="card-face card-back">${SIGIL}</div>`;
+const backHTML = () => {
+    const img = typeof equippedSleeveImg === 'function' ? equippedSleeveImg(P) : null;
+    return img
+        ? `<div class="card-face card-back has-sleeve" style="background-image:url('${img}')"></div>`
+        : `<div class="card-face card-back">${SIGIL}</div>`;
+};
 
 function layerHTML(card, index, faceUp) {
     return `<div class="card-layer" style="--i:${index}">
@@ -820,6 +825,43 @@ function buyCard(id) {
     toast(`${card.name} נוסף לאוסף`);
 }
 
+/* ---------------- חנות הכיסויים ---------------- */
+
+function buildSleeveShop() {
+    const owned = ownedSleevesOf(P);
+    const equipped = P.equippedSleeve || SLEEVE_DEFAULT;
+    $('sleeveGrid').innerHTML = Object.entries(SLEEVES).map(([key, sl]) => {
+        const isOwned = owned.includes(key);
+        const isEquipped = equipped === key;
+        const afford = coinsOf(P) >= sl.price;
+        let btnHTML;
+        if (isEquipped) btnHTML = `<button class="shop-buy disabled" disabled>מצויד ✓</button>`;
+        else if (isOwned) btnHTML = `<button class="shop-buy" data-equip="${key}">הצטיידות</button>`;
+        else btnHTML = `<button class="shop-buy${afford ? '' : ' disabled'}" data-buy-sleeve="${key}" ${afford ? '' : 'disabled'}><span class="coin-ico"></span>${sl.price}</button>`;
+        return `<div class="shop-item sleeve-item${isEquipped ? ' equipped' : ''}">
+            <div class="shop-art sleeve-art"><img class="sleeve-thumb" src="${sl.img}" alt=""></div>
+            <div class="shop-name">${sl.name}</div>
+            ${btnHTML}
+        </div>`;
+    }).join('');
+}
+
+function buySleeveUI(key) {
+    const sl = SLEEVES[key];
+    if (!buySleeve(P, key)) return toast('אין מספיק מטבעות');
+    saveProfile(P);
+    refreshCurrency();
+    buildSleeveShop();
+    toast(`${sl.name} נוסף לאוסף`);
+}
+
+function equipSleeveUI(key) {
+    if (!equipSleeve(P, key)) return;
+    saveProfile(P);
+    buildSleeveShop();
+    toast(`${SLEEVES[key].name} מצויד`);
+}
+
 /* ---------------- תיבות ---------------- */
 
 let chestTimer = null;
@@ -1251,7 +1293,7 @@ function resetCardToBase(card) {
 function refreshVisibleScreens() {
     const active = document.querySelector('.screen.active');
     if (!active) return;
-    if (active.id === 'shopScreen') buildShop();
+    if (active.id === 'shopScreen') { buildShop(); buildSleeveShop(); }
     else if (active.id === 'codexScreen') buildCodex();
     else if (active.id === 'editScreen') renderEditor();
     else if (active.id === 'mapScreen') buildMap();
@@ -1318,7 +1360,7 @@ document.addEventListener('DOMContentLoaded', () => {
         playFromHand(+btn.dataset.i);
     });
     $('btnEdit').addEventListener('click', openEditor);
-    $('btnShop').addEventListener('click', () => { buildShop(); show('shopScreen'); });
+    $('btnShop').addEventListener('click', () => { buildShop(); buildSleeveShop(); show('shopScreen'); });
     $('btnChests').addEventListener('click', openChests);
     $('btnCodex').addEventListener('click', () => show('codexScreen'));
     $('btnRules').addEventListener('click', () => $('rulesOverlay').classList.add('open'));
@@ -1367,6 +1409,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = e.target.closest('.shop-buy');
         if (!btn || btn.disabled) return;
         buyCard(+btn.dataset.id);
+    });
+    $('sleeveGrid').addEventListener('click', e => {
+        const btn = e.target.closest('.shop-buy');
+        if (!btn || btn.disabled) return;
+        if (btn.dataset.buySleeve) buySleeveUI(btn.dataset.buySleeve);
+        else if (btn.dataset.equip) equipSleeveUI(btn.dataset.equip);
+    });
+    $('shopModeTabs').addEventListener('click', e => {
+        const tab = e.target.closest('.mode-tab');
+        if (!tab) return;
+        const isCards = tab.dataset.shopTab === 'cards';
+        $('shopModeTabs').querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t === tab));
+        $('shopGrid').hidden = !isCards;
+        $('sleeveGrid').hidden = isCards;
+        $('shopCardsHint').hidden = !isCards;
+        $('shopSleevesHint').hidden = isCards;
     });
 
     // תיבות

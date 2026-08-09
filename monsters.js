@@ -411,5 +411,21 @@ const CARD_POOL = [
 
     { id: 30, name: 'קשתית האמרלד', variant: 'זינוק תקיפה', power: 6, ability: 'underdog', el: 'green',
       img: 'art/ranger-strike.jpg', imgPos: 'center 20%',
-      art: { body: 'tall', c1: '#1F5E42', c2: '#9BFF6B', eyes: 2, eyeStyle: 'angry', horns: 'none', mouth: 'none', extra: 'wings', front: 'none' } }
+      art: { body: 'tall', c1: '#1F5E42', c2: '#9BFF6B', eyes: 2, eyeStyle: 'angry', horns: 'none', mouth: 'none', extra: 'wings', front: 'none' } },
+
+    /* ---- גל שלישי ---- */
+
+    { id: 31, name: 'שומר המכונה', power: 7, ability: 'steal', el: 'blue',
+      img: 'art/machine-guardian.jpg', imgPos: 'center 15%',
+      art: { body: 'tall', c1: '#1B2436', c2: '#3FA8E8', eyes: 2, eyeStyle: 'glow', horns: 'none', mouth: 'none', extra: 'tentacles', front: 'plates' } },
+
+    /* ---- אולטרה נדיר: לא מוגרלים בתיבות, נקנים בחנות במחיר גבוה בלבד ---- */
+
+    { id: 32, name: 'אביר הגלקסיה', power: 13, ability: 'shield', el: 'gold', ultra: true,
+      img: 'art/galaxy-knight.jpg', imgPos: '68% 35%',
+      art: { body: 'tall', c1: '#E8ECFB', c2: '#E0B24A', eyes: 2, eyeStyle: 'glow', horns: 'none', mouth: 'none', extra: 'wings', front: 'plates' } },
+
+    { id: 33, name: 'נסיך התהום', power: 14, ability: 'nullify', el: 'purple', ultra: true,
+      img: 'art/abyss-prince.jpg', imgPos: 'center 15%',
+      art: { body: 'tall', c1: '#1A1622', c2: '#C4324E', eyes: 2, eyeStyle: 'angry', horns: 'none', mouth: 'grin', extra: 'wings', front: 'plates' } }
 ];

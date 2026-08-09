@@ -22,15 +22,20 @@ const PROFILE_KEY = 'zira-profile-v2';
 /* המחירים מכוילים מול קצב ההכנסה: 10 מטבעות לניצחון,
    50 על סיום ראשון של שלב, ועוד מטבעות מהתיבות */
 const RARITIES = {
-    common:    { name: 'רגיל',  tone: 'muted',  price: 40,  dust: 1 },
-    rare:      { name: 'נדיר',  tone: 'blue',   price: 110, dust: 2 },
-    epic:      { name: 'אפי',   tone: 'purple', price: 280, dust: 4 },
-    legendary: { name: 'אגדי',  tone: 'gold',   price: 600, dust: 8 }
+    common:    { name: 'רגיל',    tone: 'muted',  price: 40,   dust: 1 },
+    rare:      { name: 'נדיר',    tone: 'blue',   price: 110,  dust: 2 },
+    epic:      { name: 'אפי',     tone: 'purple', price: 280,  dust: 4 },
+    legendary: { name: 'אגדי',    tone: 'gold',   price: 600,  dust: 8 },
+    ultra:     { name: 'אולטרה',  tone: 'ultra',  price: 1500, dust: 20 }
 };
 
 const FIRST_CLEAR_COINS = 50;
 
+/* אולטרה: קלפים מיוחדים שלא נגזרים ממדרג הכוח הרגיל — מסומנים
+   ידנית ב-monsters.js עם ultra:true, ולכן לעולם לא מוגרלים בתיבות
+   (rollRarity לא בוחר את הנדירות הזאת), רק נקנים בחנות. */
 function rarityOf(card) {
+    if (card.ultra) return 'ultra';
     if (card.power >= 9) return 'legendary';
     if (card.power >= 7) return 'epic';
     if (card.power >= 5) return 'rare';
@@ -41,6 +46,48 @@ function rarityOf(card) {
    המחיר הנגזר מהנדירות. priceOverride מגיע מ-Firestore. */
 function cardPrice(card) {
     return Number.isFinite(card.priceOverride) ? card.priceOverride : RARITIES[rarityOf(card)].price;
+}
+
+/* ---------------- כיסויי קלפים (sleeves) ---------------- */
+/* SLEEVE_DEFAULT תמיד בבעלות כולם וללא עלות — זה הרקע ההתחלתי.
+   שאר הכיסויים נקנים בחנות בכסף, ואז אפשר להצטייד בהם (equip). */
+const SLEEVE_DEFAULT = 'arena_classic';
+
+const SLEEVES = {
+    arena_classic:    { name: 'הזירה — קלאסי',      price: 0,   img: 'sleeves/arena-classic.jpg' },
+    winged_crystal:   { name: 'גביש מכונף',          price: 150, img: 'sleeves/winged-crystal.jpg' },
+    arena_hebrew:     { name: 'הזירה — עברי',        price: 150, img: 'sleeves/arena-hebrew.jpg' },
+    dragonheart_blue: { name: 'לב הדרקון — תכלת',    price: 220, img: 'sleeves/dragonheart-blue.jpg' },
+    dragonheart_red:  { name: 'לב הדרקון — ארגמן',   price: 220, img: 'sleeves/dragonheart-red.jpg' },
+    dragonheart_gold: { name: 'לב הדרקון — זהב',     price: 280, img: 'sleeves/dragonheart-gold.jpg' },
+    phoenix_ascendant:{ name: 'עלית הפניקס',          price: 220, img: 'sleeves/phoenix-ascendant.jpg' },
+    aegis_of_worlds:  { name: 'מגן העולמות',          price: 220, img: 'sleeves/aegis-of-worlds.jpg' },
+    triad_of_crowns:  { name: 'שלישיית הכתרים',       price: 280, img: 'sleeves/triad-of-crowns.jpg' }
+};
+
+function ownedSleevesOf(profile) {
+    if (isAdmin(profile)) return Object.keys(SLEEVES);
+    return profile.ownedSleeves && profile.ownedSleeves.length ? profile.ownedSleeves : [SLEEVE_DEFAULT];
+}
+
+function equippedSleeveImg(profile) {
+    const key = profile.equippedSleeve && SLEEVES[profile.equippedSleeve] ? profile.equippedSleeve : SLEEVE_DEFAULT;
+    return SLEEVES[key].img;
+}
+
+function buySleeve(profile, key) {
+    if (!SLEEVES[key] || key === SLEEVE_DEFAULT) return false;
+    if (ownedSleevesOf(profile).includes(key)) return false;
+    if (!spendCoins(profile, SLEEVES[key].price)) return false;
+    if (!profile.ownedSleeves || !profile.ownedSleeves.length) profile.ownedSleeves = [SLEEVE_DEFAULT];
+    profile.ownedSleeves.push(key);
+    return true;
+}
+
+function equipSleeve(profile, key) {
+    if (!SLEEVES[key] || !ownedSleevesOf(profile).includes(key)) return false;
+    profile.equippedSleeve = key;
+    return true;
 }
 
 /* ---------------- תיבות ---------------- */
@@ -141,7 +188,9 @@ function blankProfile() {
         clearedMonsters: 0,    // התקדמות במפה בקרב מפלצות — נפרדת
         chests: new Array(CHEST_SLOTS).fill(null),  // { type, readyAt } או null
         wins: 0,
-        losses: 0
+        losses: 0,
+        ownedSleeves: [SLEEVE_DEFAULT],
+        equippedSleeve: SLEEVE_DEFAULT
     };
 }
 
@@ -210,6 +259,9 @@ function loadProfile() {
     out.clearedMonsters = Number.isFinite(p.clearedMonsters) ? Math.min(p.clearedMonsters, STAGES.length) : 0;
     out.wins = Number.isFinite(p.wins) ? p.wins : 0;
     out.losses = Number.isFinite(p.losses) ? p.losses : 0;
+    out.ownedSleeves = Array.isArray(p.ownedSleeves) && p.ownedSleeves.every(k => SLEEVES[k])
+        ? p.ownedSleeves : base.ownedSleeves;
+    out.equippedSleeve = SLEEVES[p.equippedSleeve] ? p.equippedSleeve : SLEEVE_DEFAULT;
 
     // חפיסה שאינה חוקית (למשל אחרי שינוי חוקים) מוחלפת בברירת מחדל
     const eff = ownedOf(out);

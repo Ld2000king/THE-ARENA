@@ -693,6 +693,13 @@ button, [role="button"], .clickable { touch-action: manipulation; }
 .card-back .sigil { width: 52%; opacity: .62; }
 .card-back .sigil path, .card-back .sigil circle { fill: none; stroke: #9B7FD8; stroke-width: 1.6; }
 
+/* גב קלף עם כיסוי שנבחר בחנות — תמונה מלאה במקום הסיגיל הגנרי */
+.card-back.has-sleeve {
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
 /* front — מסגרת בצבע היסוד של הקלף, עם קצה עליון תופס אור */
 .card-front {
     transform: rotateY(180deg);
@@ -901,6 +908,7 @@ button, [role="button"], .clickable { touch-action: manipulation; }
 .rar-rare      { --rar: #4E9FD6; --rar-lit: #8AC8F0; }
 .rar-epic      { --rar: #A868E8; --rar-lit: #CFA0FF; }
 .rar-legendary { --rar: #E0A93A; --rar-lit: #FFD780; }
+.rar-ultra     { --rar: #E23B6B; --rar-lit: #FF9FD0; }
 
 .rar-badge {
     position: absolute; top: 5px; inset-inline-end: 5px; z-index: 2;
@@ -929,6 +937,19 @@ button, [role="button"], .clickable { touch-action: manipulation; }
                 inset 0 1px 0 rgba(255,215,128,.4),
                 0 0 18px rgba(224,169,58,.28);
 }
+/* אולטרה: מסגרת דו-גונית זוהרת שנעה לאט — הנדירות הגבוהה ביותר במשחק */
+.card-front.rar-ultra {
+    border-width: 1.5px;
+    border-image: linear-gradient(120deg, #FF9FD0, #E0A93A, #A868E8, #FF9FD0) 1;
+    animation: ultraShift 6s ease infinite;
+    box-shadow: inset 0 0 20px rgba(0,0,0,.5),
+                inset 0 1px 0 rgba(255,159,208,.45),
+                0 0 22px rgba(226,59,107,.35);
+}
+@keyframes ultraShift {
+    0%, 100% { filter: hue-rotate(0deg); }
+    50% { filter: hue-rotate(24deg); }
+}
 
 /* ============================================================================
    SHOP
@@ -944,6 +965,7 @@ button, [role="button"], .clickable { touch-action: manipulation; }
     gap: 10px; padding-bottom: 6px;
     overscroll-behavior: contain; touch-action: pan-y;
 }
+.shop-grid[hidden] { display: none; }
 .shop-item {
     background: linear-gradient(180deg, #1C1729, var(--panel-light) 55%, #120E1B);
     border: 1px solid rgba(255,255,255,.06);
@@ -984,6 +1006,13 @@ button, [role="button"], .clickable { touch-action: manipulation; }
 }
 .shop-buy:active { transform: scale(.93); filter: brightness(.9); }
 .shop-buy.disabled { background: var(--surface-2); color: var(--text-secondary); pointer-events: none; }
+
+/* ---- כיסויי קלפים (sleeves) ---- */
+.sleeve-item { border-top-color: rgba(180,150,235,.55); }
+.sleeve-item.equipped { border-top-color: var(--neon-lime); }
+.sleeve-art { background: var(--surface-2); }
+.sleeve-thumb { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sleeve-item.equipped .shop-buy.disabled { background: color-mix(in srgb, var(--neon-lime) 30%, var(--surface-2)); color: var(--text-dark); }
 
 /* ============================================================================
    CHESTS

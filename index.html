@@ -159,11 +159,17 @@
             <button class="icon-btn btn-red-soft" id="btnShopBack" aria-label="חזרה">
                 <svg viewBox="0 0 24 24"><path d="M6 6 L18 18 M18 6 L6 18"/></svg>
             </button>
-            <div class="round-chip">חנות הקלפים</div>
+            <div class="round-chip">החנות</div>
             <div class="cur-chip"><span class="coin-ico"></span><span class="coin-val">0</span></div>
         </header>
-        <p class="screen-hint">עד 3 עותקים מכל קלף. ככל שהקלף נדיר יותר — המחיר גבוה יותר.</p>
+        <div class="mode-tabs" id="shopModeTabs">
+            <button class="mode-tab active" data-shop-tab="cards">קלפים</button>
+            <button class="mode-tab" data-shop-tab="sleeves">כיסויים</button>
+        </div>
+        <p class="screen-hint" id="shopCardsHint">עד 3 עותקים מכל קלף. ככל שהקלף נדיר יותר — המחיר גבוה יותר.</p>
+        <p class="screen-hint" id="shopSleevesHint" hidden>הכיסוי שנבחר מוצג בגב הקלפים בקרב, אצלכם בלבד.</p>
         <div class="shop-grid" id="shopGrid"></div>
+        <div class="shop-grid" id="sleeveGrid" hidden></div>
     </section>
 
     <!-- ==================== תיבות ==================== -->
