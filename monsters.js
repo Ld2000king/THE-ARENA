@@ -410,7 +410,7 @@ const STAGES = [
 /* לכל מפלצת: שם, כוח, יכולת, אלמנט (צבע המסגרת) וציור */
 
 const CARD_POOL = [
-    { id: 1, name: 'אגרוף האופל', power: 10, ability: 'none', el: 'purple',
+    { id: 1, name: 'טאי אגקוף האופל', power: 10, ability: 'none', el: 'purple',
       /* התמונה היא פוסטר דו-קרב; ממסגרים את הלוחם הסגול שמימין */
       img: 'art/dark-fist.jpg', imgPos: '74% 22%',
       art: { body: 'spiky', c1: '#5B4FCF', c2: '#C77BF5', eyes: 2, eyeStyle: 'angry', horns: 'crown', mouth: 'maw', extra: 'shards', front: 'plates' } },
@@ -423,15 +423,15 @@ const CARD_POOL = [
       img: 'art/ice-golem.jpg', imgPos: 'center 28%',
       art: { body: 'beast', c1: '#3F5B72', c2: '#7FE4FF', eyes: 2, eyeStyle: 'glow', horns: 'crown', mouth: 'grin', extra: 'shards', front: 'plates' } },
 
-    { id: 4, name: 'מלך העצמות', power: 8, ability: 'weaken', el: 'purple',
+    { id: 4, name: 'מלך הצללים', power: 8, ability: 'weaken', el: 'purple',
       img: 'art/lich-king.jpg', imgPos: 'center 18%',
       art: { body: 'tall', c1: '#D9D6E0', c2: '#5B4FCF', eyes: 2, eyeStyle: 'glow', horns: 'crown', mouth: 'grin', extra: 'aura', front: 'none' } },
 
-    { id: 5, name: 'דרקונית הקרח', power: 7, ability: 'weaken', el: 'blue',
+    { id: 5, name: 'אייס נסיכת הקרח', power: 7, ability: 'weaken', el: 'blue',
       img: 'art/ice-dragoness.jpg', imgPos: 'center 12%',
       art: { body: 'beast', c1: '#4E7FD6', c2: '#BFE4FF', eyes: 2, eyeStyle: 'slit', horns: 'twin', mouth: 'fangs', extra: 'wings', front: 'belly' } },
 
-    { id: 6, name: 'נזיר הסופה', power: 7, ability: 'boost', el: 'blue',
+    { id: 6, name: 'קאי אגרוף האור', power: 7, ability: 'boost', el: 'blue',
       img: 'art/blue-fist-monk.jpg', imgPos: 'center 20%',
       art: { body: 'tall', c1: '#E8EAF0', c2: '#4E9FD6', eyes: 2, eyeStyle: 'angry', horns: 'none', mouth: 'grin', extra: 'aura', front: 'none' } },
 
@@ -439,11 +439,11 @@ const CARD_POOL = [
       img: 'art/blood-knight.jpg', imgPos: 'center 18%',
       art: { body: 'tall', c1: '#2A1620', c2: '#D4324E', eyes: 2, eyeStyle: 'glow', horns: 'crown', mouth: 'grin', extra: 'aura', front: 'plates' } },
 
-    { id: 8, name: 'ערפד הליל', power: 6, ability: 'vampire', el: 'purple',
+    { id: 8, name: 'הרוזן באט', power: 6, ability: 'vampire', el: 'purple',
       img: 'art/night-vampire.jpg', imgPos: 'center 14%',
       art: { body: 'tall', c1: '#3B3468', c2: '#C24E7A', eyes: 2, eyeStyle: 'angry', horns: 'ears', mouth: 'fangs', extra: 'wings', front: 'none' } },
 
-    { id: 9, name: 'חלוץ הברזל', power: 6, ability: 'tie', el: 'orange',
+    { id: 9, name: 'דרקון המתכת', power: 6, ability: 'tie', el: 'orange',
       img: 'art/iron-vanguard.jpg', imgPos: 'center 45%',
       art: { body: 'beast', c1: '#A8441E', c2: '#F0C24A', eyes: 1, eyeStyle: 'glow', horns: 'twin', mouth: 'zigzag', extra: 'none', front: 'plates' } },
 
@@ -493,23 +493,23 @@ const CARD_POOL = [
 
     /* ---- גל שני: לוחמי הזירה ---- */
 
-    { id: 21, name: 'עריץ החלל', power: 10, ability: 'nullify', el: 'purple',
+    { id: 21, name: 'דארק לורד האופל', power: 10, ability: 'nullify', el: 'purple',
       img: 'art/void-tyrant.jpg', imgPos: 'center 22%',
       art: { body: 'spiky', c1: '#4A2A5E', c2: '#E060E8', eyes: 3, eyeStyle: 'glow', horns: 'crown', mouth: 'maw', extra: 'aura', front: 'plates' } },
 
-    { id: 22, name: 'מונרך השמש', power: 10, ability: 'boost', el: 'gold',
+    { id: 22, name: 'סאן לוחם השמש', power: 10, ability: 'boost', el: 'gold',
       img: 'art/sun-monarch.jpg', imgPos: 'center 14%',
       art: { body: 'tall', c1: '#D9A82E', c2: '#FFF0A8', eyes: 2, eyeStyle: 'glow', horns: 'crown', mouth: 'grin', extra: 'aura', front: 'plates' } },
 
-    { id: 23, name: 'משמיד הוורד', power: 9, ability: 'vampire', el: 'pink',
+    { id: 23, name: 'מונרה המשמיד', power: 9, ability: 'vampire', el: 'pink',
       img: 'art/rose-destroyer.jpg', imgPos: 'center 12%',
       art: { body: 'tall', c1: '#2A1C33', c2: '#F58AB8', eyes: 2, eyeStyle: 'angry', horns: 'none', mouth: 'grin', extra: 'aura', front: 'none' } },
 
-    { id: 24, name: 'מלך הסאיאן', power: 9, ability: 'boost', el: 'blue',
+    { id: 24, name: ' פירס מלך הסאיאן', power: 9, ability: 'boost', el: 'blue',
       img: 'art/saiyan-king.jpg', imgPos: 'center 20%',
       art: { body: 'tall', c1: '#8E2036', c2: '#5FD8FF', eyes: 2, eyeStyle: 'angry', horns: 'none', mouth: 'grin', extra: 'aura', front: 'plates' } },
 
-    { id: 25, name: 'שומר הליל', power: 8, ability: 'shield', el: 'blue',
+    { id: 25, name: 'שומר הלילה', power: 8, ability: 'shield', el: 'blue',
       img: 'art/night-warden.jpg', imgPos: 'center 22%',
       art: { body: 'beast', c1: '#242B3E', c2: '#E8C24A', eyes: 2, eyeStyle: 'glow', horns: 'twin', mouth: 'grin', extra: 'wings', front: 'plates' } },
 
@@ -517,11 +517,11 @@ const CARD_POOL = [
       img: 'art/titan-prime.jpg', imgPos: 'center 12%',
       art: { body: 'tall', c1: '#B3232E', c2: '#4FA8FF', eyes: 2, eyeStyle: 'glow', horns: 'twin', mouth: 'none', extra: 'aura', front: 'plates' } },
 
-    { id: 27, name: 'רץ הזמן', power: 7, ability: 'steal', el: 'red',
+    { id: 27, name: 'האצן', power: 7, ability: 'steal', el: 'red',
       img: 'art/chrono-racer.jpg', imgPos: 'center 20%',
       art: { body: 'tall', c1: '#B32E3E', c2: '#8F7BF5', eyes: 2, eyeStyle: 'angry', horns: 'none', mouth: 'grin', extra: 'aura', front: 'none' } },
 
-    { id: 28, name: 'זקיף הסופה', power: 7, ability: 'weaken', el: 'orange',
+    { id: 28, name: 'איירון ספארק', power: 7, ability: 'weaken', el: 'orange',
       img: 'art/storm-sentinel.jpg', imgPos: 'center 20%',
       art: { body: 'tall', c1: '#2E3A5E', c2: '#F5A02E', eyes: 2, eyeStyle: 'glow', horns: 'none', mouth: 'none', extra: 'aura', front: 'plates' } },
 
@@ -537,7 +537,7 @@ const CARD_POOL = [
 
     /* ---- גל שלישי ---- */
 
-    { id: 31, name: 'שומר המכונה', power: 7, ability: 'steal', el: 'blue',
+    { id: 31, name: 'העכביש הרובוטי', power: 7, ability: 'steal', el: 'blue',
       img: 'art/machine-guardian.jpg', imgPos: 'center 15%',
       art: { body: 'tall', c1: '#1B2436', c2: '#3FA8E8', eyes: 2, eyeStyle: 'glow', horns: 'none', mouth: 'none', extra: 'tentacles', front: 'plates' } },
 
@@ -547,17 +547,17 @@ const CARD_POOL = [
       img: 'art/orion.jpg', imgPos: 'center 18%',
       art: { body: 'tall', c1: '#2B4A7E', c2: '#E8EEF7', eyes: 2, eyeStyle: 'glow', horns: 'none', mouth: 'none', extra: 'aura', front: 'plates' } },
 
-    { id: 35, name: 'נוסה', power: 8, ability: 'nullify', el: 'gold',
+    { id: 35, name: 'נובה', power: 8, ability: 'nullify', el: 'gold',
       img: 'art/nossa.jpg', imgPos: 'center 16%',
       art: { body: 'tall', c1: '#1A1A1E', c2: '#F5D02E', eyes: 2, eyeStyle: 'glow', horns: 'none', mouth: 'none', extra: 'shards', front: 'plates' } },
 
     /* ---- אולטרה נדיר: לא מוגרלים בתיבות, נקנים בחנות במחיר גבוה בלבד ---- */
 
-    { id: 32, name: 'אביר הגלקסיה', power: 13, ability: 'shield', el: 'gold', ultra: true,
+    { id: 32, name: 'לומינוס מאיר השמיים', power: 13, ability: 'shield', el: 'gold', ultra: true,
       img: 'art/galaxy-knight.jpg', imgPos: '68% 35%',
       art: { body: 'tall', c1: '#E8ECFB', c2: '#E0B24A', eyes: 2, eyeStyle: 'glow', horns: 'none', mouth: 'none', extra: 'wings', front: 'plates' } },
 
-    { id: 33, name: 'נסיך התהום', power: 14, ability: 'nullify', el: 'purple', ultra: true,
+    { id: 33, name: 'אכזר האפל', power: 14, ability: 'nullify', el: 'purple', ultra: true,
       img: 'art/abyss-prince.jpg', imgPos: 'center 15%',
       art: { body: 'tall', c1: '#1A1622', c2: '#C4324E', eyes: 2, eyeStyle: 'angry', horns: 'none', mouth: 'grin', extra: 'wings', front: 'plates' } }
 ];
