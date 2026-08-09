@@ -419,6 +419,16 @@ const CARD_POOL = [
       img: 'art/machine-guardian.jpg', imgPos: 'center 15%',
       art: { body: 'tall', c1: '#1B2436', c2: '#3FA8E8', eyes: 2, eyeStyle: 'glow', horns: 'none', mouth: 'none', extra: 'tentacles', front: 'plates' } },
 
+    /* ---- גל רביעי: מגני האור ---- */
+
+    { id: 34, name: 'אוריון', power: 7, ability: 'shield', el: 'blue',
+      img: 'art/orion.jpg', imgPos: 'center 18%',
+      art: { body: 'tall', c1: '#2B4A7E', c2: '#E8EEF7', eyes: 2, eyeStyle: 'glow', horns: 'none', mouth: 'none', extra: 'aura', front: 'plates' } },
+
+    { id: 35, name: 'נוסה', power: 8, ability: 'nullify', el: 'gold',
+      img: 'art/nossa.jpg', imgPos: 'center 16%',
+      art: { body: 'tall', c1: '#1A1A1E', c2: '#F5D02E', eyes: 2, eyeStyle: 'glow', horns: 'none', mouth: 'none', extra: 'shards', front: 'plates' } },
+
     /* ---- אולטרה נדיר: לא מוגרלים בתיבות, נקנים בחנות במחיר גבוה בלבד ---- */
 
     { id: 32, name: 'אביר הגלקסיה', power: 13, ability: 'shield', el: 'gold', ultra: true,
