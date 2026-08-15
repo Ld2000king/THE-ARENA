@@ -1247,6 +1247,21 @@ button, [role="button"], .clickable { touch-action: manipulation; }
 .sleeve-thumb { width: 100%; height: 100%; object-fit: cover; display: block; }
 .sleeve-item.equipped .shop-buy.disabled { background: color-mix(in srgb, var(--neon-lime) 30%, var(--surface-2)); color: var(--text-dark); }
 
+/* אווטרים — אותה כרטיסייה כמו הכיסויים, אבל התמונה עגולה כמו
+   שהיא מופיעה ברצועת השחקן בקרב */
+.avatar-item { border-top-color: rgba(120,190,240,.5); }
+.avatar-item.equipped { border-top-color: var(--neon-lime); }
+.avatar-item.equipped .shop-buy.disabled { background: color-mix(in srgb, var(--neon-lime) 30%, var(--surface-2)); color: var(--text-dark); }
+.avatar-art {
+    border-radius: 50%;
+    overflow: hidden;
+    width: 78%; margin: 4px auto 0;
+    aspect-ratio: 1 / 1;
+    border: 2px solid rgba(255,255,255,.1);
+}
+.avatar-thumb { width: 100%; height: 100%; object-fit: cover; display: block; }
+.avatar-art .mon { width: 100%; height: 100%; }
+
 /* ============================================================================
    CHESTS
    ============================================================================ */

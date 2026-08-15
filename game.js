@@ -736,6 +736,7 @@ function startGame(stageIdx = null, battleMode = 'quick', tour = null) {
     $('enemyAvatar').innerHTML = foeImg
         ? `<img class="avatar-img" src="${foeImg}" alt="">`
         : monsterSVG({ body: 'spiky', c1: '#B3372E', c2: '#F0C24A', eyes: 2, eyeStyle: 'angry', horns: 'twin', mouth: 'fangs', extra: 'none', front: 'none' });
+    renderPlayerAvatar();
 
     $('roundNum').textContent = '1';
     $('playerSlot').innerHTML = layerHTML(null, 0, false);
@@ -995,6 +996,58 @@ function equipSleeveUI(key) {
     saveProfile(P);
     buildSleeveShop();
     toast(`${SLEEVES[key].name} מצויד`);
+}
+
+/* ---------------- חנות האווטרים ---------------- */
+
+/* האווטר של השחקן מוצג ברצועה שלו בקרב. נבנה מחדש בכל כניסה לקרב
+   ואחרי הצטיידות, כדי שהשינוי ייראה מיד. */
+function renderPlayerAvatar() {
+    const a = equippedAvatarOf(P);
+    $('meAvatar').innerHTML = (a && a.img)
+        ? `<img class="avatar-img" src="${a.img}" alt="" style="object-position:${a.imgPos}"
+             onerror="this.closest('.avatar').innerHTML = monsterSVG({ body:'blob', c1:'#3A65B8', c2:'#BFE4FF', eyes:2, eyeStyle:'glow', horns:'ears', mouth:'grin', extra:'none', front:'none' })">`
+        : monsterSVG({ body: 'blob', c1: '#3A65B8', c2: '#BFE4FF', eyes: 2, eyeStyle: 'glow', horns: 'ears', mouth: 'grin', extra: 'none', front: 'none' });
+}
+
+function buildAvatarShop() {
+    const owned = ownedAvatarsOf(P);
+    const equipped = (equippedAvatarOf(P) || {}).key;
+    $('avatarGrid').innerHTML = avatarCatalog().map(a => {
+        const isOwned = owned.includes(a.key);
+        const isEquipped = equipped === a.key;
+        const afford = coinsOf(P) >= a.price;
+        let btnHTML;
+        if (isEquipped) btnHTML = `<button class="shop-buy disabled" disabled>מצויד ✓</button>`;
+        else if (isOwned) btnHTML = `<button class="shop-buy" data-equip-avatar="${a.key}">הצטיידות</button>`;
+        else btnHTML = `<button class="shop-buy${afford ? '' : ' disabled'}" data-buy-avatar="${a.key}" ${afford ? '' : 'disabled'}><span class="coin-ico"></span>${a.price}</button>`;
+        return `<div class="shop-item avatar-item${isEquipped ? ' equipped' : ''}">
+            <div class="shop-art avatar-art el-${a.el}">
+                ${a.img
+                    ? `<img class="avatar-thumb" src="${a.img}" alt="" style="object-position:${a.imgPos}" onerror="this.remove()">`
+                    : monsterSVG({ body: 'blob', c1: '#3A65B8', c2: '#BFE4FF', eyes: 2, eyeStyle: 'glow', horns: 'ears', mouth: 'grin', extra: 'none', front: 'none' })}
+            </div>
+            <div class="shop-name">${a.name}</div>
+            ${btnHTML}
+        </div>`;
+    }).join('');
+}
+
+function buyAvatarUI(key) {
+    const a = avatarByKey(key);
+    if (!buyAvatar(P, key)) return toast('אין מספיק מטבעות');
+    saveProfile(P);
+    refreshCurrency();
+    buildAvatarShop();
+    toast(`${a.name} נוסף לאוסף`);
+}
+
+function equipAvatarUI(key) {
+    if (!equipAvatar(P, key)) return;
+    saveProfile(P);
+    renderPlayerAvatar();
+    buildAvatarShop();
+    toast(`${avatarByKey(key).name} מצויד`);
 }
 
 /* ---------------- תיבות ---------------- */
@@ -1410,6 +1463,8 @@ function tourneyNextBattle() {
     if (!run || !run.active) return;
     const foe = tourneyCurrentFoe(run);
     if (!foe) { toast('לא נמצא יריב'); return; }
+    /* היציאה לקרב היא מה שסוגר את עצירת החנות ומבטל את ההצעה */
+    tourneyConsumeShop(run);
     saveProfile(P);   // היריב שנוצר עכשיו נשמר, כדי שרענון לא יגריל אחר
 
     const isWar = run.type === 'war';
@@ -1527,6 +1582,12 @@ function retireTourneyRun() {
 function openTourneyShop() {
     const run = activeRun();
     if (!run || run.type !== 'colosseum') return;
+    /* רשת ביטחון: ריצה שנשמרה בגרסה קודמת (לפני ההצעות) מגיעה בלי
+       offer, ואז מגרילים אחת עכשיו במקום להציג חנות ריקה. */
+    if (!Array.isArray(run.offer) || !run.offer.length) {
+        run.offer = rollShopOffer(run);
+        saveProfile(P);
+    }
     renderTourneyShop();
     $('tourneyShopOverlay').classList.add('open');
 }
@@ -1551,7 +1612,9 @@ function renderTourneyShop() {
         </div>`;
     }).join('');
 
-    $('tourneyShopGrid').innerHTML = CARD_POOL.map(card => {
+    /* רק שלושת הקלפים של העצירה הנוכחית, לא כל האוסף */
+    const offered = (run.offer || []).map(id => byId(id)).filter(Boolean);
+    $('tourneyShopGrid').innerHTML = offered.map(card => {
         const rar = rarityOf(card);
         const price = tourneyCardPrice(card);
         const have = run.owned[card.id] || 0;
@@ -1823,7 +1886,7 @@ function resetCardToBase(card) {
 function refreshVisibleScreens() {
     const active = document.querySelector('.screen.active');
     if (!active) return;
-    if (active.id === 'shopScreen') { buildShop(); buildSleeveShop(); }
+    if (active.id === 'shopScreen') { buildShop(); buildSleeveShop(); buildAvatarShop(); }
     else if (active.id === 'codexScreen') buildCodex();
     else if (active.id === 'editScreen') renderEditor();
     else if (active.id === 'mapScreen') buildMap();
@@ -1864,7 +1927,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     $('crest').innerHTML = `<img class="crest-img" src="art/logo.jpg" alt="הזירה"
         onerror="this.remove(); document.getElementById('crest').innerHTML = monsterSVG(CARD_POOL[0].art);">`;
-    $('meAvatar').innerHTML = monsterSVG({ body: 'blob', c1: '#3A65B8', c2: '#BFE4FF', eyes: 2, eyeStyle: 'glow', horns: 'ears', mouth: 'grin', extra: 'none', front: 'none' });
+    renderPlayerAvatar();
 
     buildCodex();
     buildLegend();
@@ -1894,7 +1957,7 @@ document.addEventListener('DOMContentLoaded', () => {
     /* חובה לעטוף: openEditor מקבל עכשיו הקשר עריכה, ומעבר ישיר של
        הפניה לפונקציה היה מזריק לתוכו את אירוע הלחיצה */
     $('btnEdit').addEventListener('click', () => openEditor());
-    $('btnShop').addEventListener('click', () => { buildShop(); buildSleeveShop(); show('shopScreen'); });
+    $('btnShop').addEventListener('click', () => { buildShop(); buildSleeveShop(); buildAvatarShop(); show('shopScreen'); });
     $('btnChests').addEventListener('click', openChests);
     $('btnCodex').addEventListener('click', () => show('codexScreen'));
     $('btnRules').addEventListener('click', () => $('rulesOverlay').classList.add('open'));
@@ -2008,11 +2071,9 @@ document.addEventListener('DOMContentLoaded', () => {
         toast(res.msg);
         if (res.ok) { saveProfile(P); renderTourneyShop(); renderTourneyRun(); }
     });
-    /* סגירת החנות היא גם מה שסוגר את "עצירת החנות" הנוכחית — משם
-       והלאה צריך עוד 2 קרבות כדי שהיא תיפתח שוב */
+    /* סגירת החלון לא מסיימת את העצירה — אפשר להיכנס ולצאת, להתחרט
+       ולחזור, כל עוד לא יצאתם לקרב הבא. העצירה נסגרת ב-tourneyNextBattle. */
     $('btnTourneyShopClose').addEventListener('click', () => {
-        const run = activeRun();
-        if (run) { run.shopOpen = false; saveProfile(P); }
         $('tourneyShopOverlay').classList.remove('open');
         renderTourneyRun();
     });
@@ -2029,15 +2090,29 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btn.dataset.buySleeve) buySleeveUI(btn.dataset.buySleeve);
         else if (btn.dataset.equip) equipSleeveUI(btn.dataset.equip);
     });
+    /* שלוש לשוניות: קלפים, כיסויים, אווטרים. הרשימה מוגדרת פעם אחת
+       כדי שהוספת לשונית נוספת לא תדרוש עוד תנאי בוליאני. */
+    const SHOP_TABS = {
+        cards:   { grid: 'shopGrid',   hint: 'shopCardsHint' },
+        sleeves: { grid: 'sleeveGrid', hint: 'shopSleevesHint' },
+        avatars: { grid: 'avatarGrid', hint: 'shopAvatarsHint' }
+    };
     $('shopModeTabs').addEventListener('click', e => {
         const tab = e.target.closest('.mode-tab');
         if (!tab) return;
-        const isCards = tab.dataset.shopTab === 'cards';
+        const key = tab.dataset.shopTab;
+        if (!SHOP_TABS[key]) return;
         $('shopModeTabs').querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t === tab));
-        $('shopGrid').hidden = !isCards;
-        $('sleeveGrid').hidden = isCards;
-        $('shopCardsHint').hidden = !isCards;
-        $('shopSleevesHint').hidden = isCards;
+        for (const [k, els] of Object.entries(SHOP_TABS)) {
+            $(els.grid).hidden = k !== key;
+            $(els.hint).hidden = k !== key;
+        }
+    });
+    $('avatarGrid').addEventListener('click', e => {
+        const btn = e.target.closest('.shop-buy');
+        if (!btn || btn.disabled) return;
+        if (btn.dataset.buyAvatar) buyAvatarUI(btn.dataset.buyAvatar);
+        else if (btn.dataset.equipAvatar) equipAvatarUI(btn.dataset.equipAvatar);
     });
 
     // תיבות

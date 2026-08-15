@@ -96,6 +96,67 @@ function equipSleeve(profile, key) {
     return true;
 }
 
+/* ---------------- אווטרים ---------------- */
+/* האווטרים הם הדמויות שכבר קיימות במשחק — כל קלף עם תמונה הופך
+   לאווטר שאפשר לקנות. ברירת המחדל היא הציור הפרוצדורלי המקורי.
+   הקטלוג נבנה בכל קריאה ולא נשמר, כדי שעריכת קלף גלובלית של אדמין
+   (שם/מחיר) תשתקף גם באווטרים בלי סנכרון נפרד. */
+const AVATAR_DEFAULT = 'default';
+
+function avatarPrice(card) {
+    return Math.max(60, Math.round(RARITIES[rarityOf(card)].price * 0.8));
+}
+
+function avatarCatalog() {
+    const out = [{
+        key: AVATAR_DEFAULT, name: 'לוחם הזירה',
+        img: null, imgPos: null, price: 0, el: 'blue'
+    }];
+    for (const c of CARD_POOL) {
+        if (!c.img) continue;
+        out.push({
+            key: 'card:' + c.id,
+            name: c.name,
+            img: c.img,
+            imgPos: c.imgPos || 'center 20%',
+            price: avatarPrice(c),
+            el: c.el
+        });
+    }
+    return out;
+}
+
+function avatarByKey(key) {
+    return avatarCatalog().find(a => a.key === key) || null;
+}
+
+function ownedAvatarsOf(profile) {
+    if (isAdmin(profile)) return avatarCatalog().map(a => a.key);
+    return profile.ownedAvatars && profile.ownedAvatars.length
+        ? profile.ownedAvatars : [AVATAR_DEFAULT];
+}
+
+function equippedAvatarOf(profile) {
+    const a = profile.equippedAvatar ? avatarByKey(profile.equippedAvatar) : null;
+    return a || avatarByKey(AVATAR_DEFAULT);
+}
+
+function buyAvatar(profile, key) {
+    const a = avatarByKey(key);
+    if (!a || key === AVATAR_DEFAULT) return false;
+    if (ownedAvatarsOf(profile).includes(key)) return false;
+    if (!spendCoins(profile, a.price)) return false;
+    if (!profile.ownedAvatars || !profile.ownedAvatars.length) profile.ownedAvatars = [AVATAR_DEFAULT];
+    profile.ownedAvatars.push(key);
+    return true;
+}
+
+function equipAvatar(profile, key) {
+    if (!avatarByKey(key) || !ownedAvatarsOf(profile).includes(key)) return false;
+    profile.equippedAvatar = key;
+    return true;
+}
+
 /* ---------------- תיבות ---------------- */
 /* ככל שסיכויי הנדירות טובים יותר — זמן הפתיחה ארוך יותר */
 const CHEST_TYPES = {
@@ -197,6 +258,8 @@ function blankProfile() {
         losses: 0,
         ownedSleeves: [SLEEVE_DEFAULT],
         equippedSleeve: SLEEVE_DEFAULT,
+        ownedAvatars: [AVATAR_DEFAULT],
+        equippedAvatar: AVATAR_DEFAULT,
         /* ריצת טורניר פעילה (או null). נשמרת כדי שרענון דף לא ימחק
            רצף ארוך בקולוסיאום. ראו sanitizeTourneyRun ב-tournament.js */
         tourney: null
@@ -271,6 +334,9 @@ function loadProfile() {
     out.ownedSleeves = Array.isArray(p.ownedSleeves) && p.ownedSleeves.every(k => SLEEVES[k])
         ? p.ownedSleeves : base.ownedSleeves;
     out.equippedSleeve = SLEEVES[p.equippedSleeve] ? p.equippedSleeve : SLEEVE_DEFAULT;
+    out.ownedAvatars = Array.isArray(p.ownedAvatars) && p.ownedAvatars.every(k => avatarByKey(k))
+        ? p.ownedAvatars : base.ownedAvatars;
+    out.equippedAvatar = avatarByKey(p.equippedAvatar) ? p.equippedAvatar : AVATAR_DEFAULT;
     /* ריצה שנשמרה חייבת לעבור אימות מלא — פרופיל ישן או ריצה פגומה
        לא יפילו את המשחק, פשוט לא תהיה ריצה פעילה */
     out.tourney = typeof sanitizeTourneyRun === 'function' ? sanitizeTourneyRun(p.tourney) : null;

@@ -229,11 +229,14 @@
         <div class="mode-tabs" id="shopModeTabs">
             <button class="mode-tab active" data-shop-tab="cards">קלפים</button>
             <button class="mode-tab" data-shop-tab="sleeves">כיסויים</button>
+            <button class="mode-tab" data-shop-tab="avatars">אווטרים</button>
         </div>
         <p class="screen-hint" id="shopCardsHint">עד 3 עותקים מכל קלף. ככל שהקלף נדיר יותר — המחיר גבוה יותר.</p>
         <p class="screen-hint" id="shopSleevesHint" hidden>הכיסוי שנבחר מוצג בגב הקלפים בקרב, אצלכם בלבד.</p>
+        <p class="screen-hint" id="shopAvatarsHint" hidden>האווטר שנבחר מוצג לצד השם שלכם בקרב. כל דמות במשחק זמינה כאווטר.</p>
         <div class="shop-grid" id="shopGrid"></div>
         <div class="shop-grid" id="sleeveGrid" hidden></div>
+        <div class="shop-grid" id="avatarGrid" hidden></div>
     </section>
 
     <!-- ==================== תיבות ==================== -->
@@ -451,7 +454,9 @@
             <div class="tourney-shop-gold">
                 <span class="gold-ico"></span><span id="tourneyShopGold">0</span> מטבעות זירה
             </div>
-            <p class="screen-hint">קלף שקונים נכנס לאוסף הריצה — אחר כך משבצים אותו דרך "ערכו את החפיסה".</p>
+            <p class="screen-hint">בכל עצירה מוצעים <b>3 קלפים מתחלפים</b>, ומה שמוצע משתפר ככל שמעמיקים בריצה.
+                קלף שקונים נכנס לאוסף הריצה — אחר כך משבצים אותו דרך "ערכו את החפיסה".
+                אפשר להיכנס ולצאת מהחנות עד שיוצאים לקרב הבא.</p>
             <div class="tourney-items" id="tourneyItems"></div>
             <div class="shop-grid" id="tourneyShopGrid"></div>
             <button class="mega-btn primary-cta" id="btnTourneyShopClose">סיום קניות</button>

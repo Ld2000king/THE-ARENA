@@ -61,11 +61,90 @@ const TOURNEY_ITEMS = {
 /* כמה קרבות בין עצירה לעצירה בחנות */
 const TOURNEY_SHOP_EVERY = 2;
 
+/* כמה קלפים מוצעים בכל עצירה — הצעה מצומצמת ומתחלפת, לא כל האוסף */
+const TOURNEY_OFFER_SIZE = 3;
+
 /* מחיר קלף בחנות הריצה — נגזר ממחיר החנות הרגילה אבל בקנה מידה של
    מטבעות זירה, שנצברים הרבה יותר לאט מהמטבעות האמיתיים. */
 function tourneyCardPrice(card) {
     const base = RARITIES[rarityOf(card)].price;
     return Math.max(15, Math.round(base * 0.32));
+}
+
+/* ---------------- הצעת החנות ---------------- */
+
+/* משקלי הנדירות בהצעה כפונקציה של עומק הריצה: בהתחלה בעיקר קלפים
+   רגילים, וככל שמתקדמים ההצעה מטפסת לאפיים, אגדיים ואולטרה. */
+function shopRarityWeights(round) {
+    const t = Math.min(1, Math.max(0, (round - 1) / 18));
+    return {
+        common:    Math.max(0, 55 - 52 * t),
+        rare:      Math.max(0, 35 -  8 * t),
+        epic:      10 + 25 * t,
+        legendary:      30 * t,
+        ultra:           8 * t
+    };
+}
+
+function pickWeighted(weights) {
+    const keys = Object.keys(weights);
+    if (!keys.length) return null;
+    const total = keys.reduce((a, k) => a + weights[k], 0);
+    if (total <= 0) return keys[0];
+    let r = Math.random() * total;
+    for (const k of keys) {
+        if (r < weights[k]) return k;
+        r -= weights[k];
+    }
+    return keys[keys.length - 1];
+}
+
+const RARITY_ORDER = ['common', 'rare', 'epic', 'legendary', 'ultra'];
+
+/* מגריל את ההצעה של עצירה אחת. נשמרת בריצה ולא מוגרלת מחדש בכל
+   רינדור — אחרת יציאה וכניסה חוזרת לחנות היו מרעננות את ההצעה
+   בלי הגבלה, ובוחרים היו מגלגלים עד שיוצא קלף אולטרה. */
+function rollShopOffer(run) {
+    if (!run) return [];
+    const baseWeights = shopRarityWeights(run.round || 1);
+    const eligible = CARD_POOL.filter(c => (run.owned[c.id] || 0) < MAX_COPIES);
+    const pool = eligible.length ? eligible : CARD_POOL;
+    const chosen = [];
+
+    while (chosen.length < Math.min(TOURNEY_OFFER_SIZE, pool.length)) {
+        const avail = pool.filter(c => !chosen.includes(c.id));
+        if (!avail.length) break;
+
+        /* משקללים רק נדירויות שבאמת יש להן קלף זמין. בלי זה נוצר באג
+           אמיתי: החפיסה הסטנדרטית כבר מחזיקה 3 עותקים מכל הקלפים
+           הרגילים, כלומר דרגת "רגיל" ריקה מהרגע הראשון — ו-55%
+           מההגרלות בסיבוב 1 היו נופלות להגרלה חופשית שמסוגלת להוציא
+           קלף אולטרה כבר בעצירה הראשונה. */
+        const weights = {};
+        for (const [rar, w] of Object.entries(baseWeights)) {
+            if (w > 0 && avail.some(c => rarityOf(c) === rar)) weights[rar] = w;
+        }
+
+        let rar = pickWeighted(weights);
+        if (!rar) {
+            /* אף נדירות עם משקל חיובי אינה זמינה — עולים לחלשה ביותר
+               שכן זמינה, ולא מגרילים חופשי */
+            rar = RARITY_ORDER.find(r => avail.some(c => rarityOf(c) === r));
+        }
+        const tier = avail.filter(c => rarityOf(c) === rar);
+        if (!tier.length) break;
+        chosen.push(tier[Math.floor(Math.random() * tier.length)].id);
+    }
+    return chosen;
+}
+
+/* העצירה בחנות נגמרת רק כשיוצאים לקרב הבא — לא בסגירת החלון.
+   כך אפשר להיכנס ולצאת מהחנות כמה פעמים, להתחרט ולחזור, כל עוד
+   לא התחיל הקרב. */
+function tourneyConsumeShop(run) {
+    if (!run) return;
+    run.shopOpen = false;
+    run.offer = null;
 }
 
 /* ---------------- יריבים ---------------- */
@@ -155,6 +234,7 @@ function newColosseumRun(diff, battleMode, fullHeal) {
         wins: 0,
         battlesSinceShop: 0,
         shopOpen: false,
+        offer: null,          // 3 הקלפים המוצעים בעצירה הנוכחית
         active: true
     };
 }
@@ -214,6 +294,7 @@ function tourneyAfterBattle(run, won, playerHP) {
         if (run.battlesSinceShop >= TOURNEY_SHOP_EVERY) {
             run.battlesSinceShop = 0;
             run.shopOpen = true;
+            run.offer = rollShopOffer(run);
         }
         return { over: false, won: true, gold, shopOpen: run.shopOpen, wins: run.wins };
     }
@@ -261,6 +342,11 @@ function tourneyAfterBattle(run, won, playerHP) {
 function tourneyBuyCard(run, cardId) {
     const card = byId(cardId);
     if (!run || !run.active || !card) return { ok: false, msg: 'קלף לא קיים' };
+    /* אפשר לקנות רק מתוך שלושת הקלפים של העצירה הנוכחית. הבדיקה
+       מדלגת כשאין הצעה, כדי לא לשבור ריצה שנשמרה בגרסה קודמת. */
+    if (Array.isArray(run.offer) && run.offer.length && !run.offer.includes(cardId)) {
+        return { ok: false, msg: 'הקלף הזה לא מוצע בעצירה הנוכחית' };
+    }
     const have = run.owned[cardId] || 0;
     if (have >= MAX_COPIES) return { ok: false, msg: `כבר יש לכם ${MAX_COPIES} עותקים` };
     const price = tourneyCardPrice(card);
@@ -334,6 +420,10 @@ function sanitizeTourneyRun(run) {
         run.gold = Number.isFinite(run.gold) ? run.gold : 0;
         run.round = Number.isFinite(run.round) && run.round > 0 ? run.round : 1;
         run.wins = Number.isFinite(run.wins) ? run.wins : 0;
+        /* הצעה פגומה או מזהה קלף שכבר לא קיים — פשוט מתאפסת, והחנות
+           תגריל הצעה חדשה בכניסה הבאה */
+        run.offer = Array.isArray(run.offer) && run.offer.every(id => byId(id))
+            ? run.offer : null;
     } else {
         if (!Array.isArray(run.participants) || run.participants.length < 2) return null;
         if (!run.participants[0] || !run.participants[0].isPlayer) return null;
@@ -346,10 +436,11 @@ function sanitizeTourneyRun(run) {
 /* חשיפה ל-Node לצורך בדיקות; בדפדפן אין module ולכן מדלגים */
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        TOURNEY_DIFFS, TOURNEY_ITEMS, TOURNEY_SHOP_EVERY, WAR_ROUND_NAMES,
+        TOURNEY_DIFFS, TOURNEY_ITEMS, TOURNEY_SHOP_EVERY, TOURNEY_OFFER_SIZE, WAR_ROUND_NAMES,
         colosseumStarterOwned, colosseumStarterDeck, colosseumFoe, buildWarBracket,
         newColosseumRun, newWarRun, tourneyAfterBattle, tourneyCurrentFoe,
         tourneyBuyCard, tourneyBuyItem, tourneyCardPrice, tourneyFinalReward,
-        tourneyHasUnusedCards, sanitizeTourneyRun, colosseumGoldFor
+        tourneyHasUnusedCards, sanitizeTourneyRun, colosseumGoldFor,
+        rollShopOffer, shopRarityWeights, tourneyConsumeShop
     };
 }
