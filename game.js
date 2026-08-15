@@ -16,10 +16,13 @@ const S = {
     pendingSummon: null,    // { index, sacrifices[] } בזמן בחירת קורבנות
     sacrificeNote: '',
     playerHP: START_HP, enemyHP: START_HP, enemyMaxHP: START_HP,
+    /* תקרת החיים של השחקן אינה קבועה: בטורניר הקולוסיאום היא עולה
+       דרך שדרוגים בחנות, ולכן מד החיים חייב להתחלק בה ולא ב-START_HP */
+    playerMaxHP: START_HP,
     round: 1,
     busy: false,
     war: null,
-    mode: 'quick',          // 'quick' | 'campaign'
+    mode: 'quick',          // 'quick' | 'campaign' | 'tournament'
     mapMode: 'quick',       // מצב הקרב שנבחר במפת השלבים
     stageIdx: null,
     stats: { wins: 0, losses: 0, wars: 0, dealt: 0, taken: 0 }
@@ -192,7 +195,7 @@ function drawCard(side) {
 }
 
 function updateBars(anim) {
-    const pPct = Math.max(0, (S.playerHP / START_HP) * 100);
+    const pPct = Math.max(0, (S.playerHP / S.playerMaxHP) * 100);
     const ePct = Math.max(0, (S.enemyHP / S.enemyMaxHP) * 100);
     $('playerCount').textContent = Math.max(0, S.playerHP);
     $('enemyCount').textContent = Math.max(0, S.enemyHP);
@@ -473,8 +476,8 @@ function finishRound(pCard, eCard) {
     if (playerWon) {
         S.enemyHP -= dmg; S.stats.dealt += dmg;
         floatDamage('e', dmg, 'dmg');
-        if (winAb === 'vampire' && S.playerHP < START_HP) {
-            const heal = Math.min(2, START_HP - S.playerHP);
+        if (winAb === 'vampire' && S.playerHP < S.playerMaxHP) {
+            const heal = Math.min(2, S.playerMaxHP - S.playerHP);
             S.playerHP += heal;
             floatDamage('p', heal, 'heal');
             extra.push(`${winCard.name} ריפא ${heal} חיים`);
@@ -609,6 +612,10 @@ function endGame() {
     S.war = null;
     $('warBanner').classList.remove('on');
 
+    /* קרב טורניר לא מזכה במטבעות/תיבה/התקדמות במפה — הפרס שם ניתן
+       פעם אחת בסוף הריצה כולה. ראו endTournamentBattle. */
+    if (S.mode === 'tournament') { endTournamentBattle(playerWon); return; }
+
     const stage = S.mode === 'campaign' ? STAGES[S.stageIdx] : null;
     const rewards = [];
 
@@ -675,8 +682,13 @@ function endGame() {
 
     const hasNext = stage && playerWon && !isLast;
     $('btnNextStage').style.display = hasNext ? '' : 'none';
+    $('btnNextStage').textContent = 'לשלב הבא';
     $('btnResultEdit').style.display = (stage && !playerWon) ? '' : 'none';
+    /* משחזרים במפורש את מה ש-endTournamentBattle משנה — אחרת קרב
+       טורניר היה משאיר את "קרב חוזר" מוסתר לצמיתות בשאר המצבים */
+    $('btnRematch').style.display = '';
     $('btnRematch').textContent = stage ? 'שחקו שוב בשלב' : 'קרב חוזר';
+    $('btnHome').textContent = 'חזרה';
     $('resultOverlay').classList.add('open');
     S.busy = false;
 }
@@ -688,21 +700,29 @@ function show(id) {
     $(id).classList.add('active');
 }
 
-function startGame(stageIdx = null, battleMode = 'quick') {
-    S.mode = stageIdx === null ? 'quick' : 'campaign';
+/* tour (אופציונלי) הופך את הקרב לקרב טורניר:
+   { deck, playerHP, playerMaxHP, foe:{name,img,el,power,hp}, label, taunt }
+   כך שכל שאר הזרימה — חשיפה, הכרעה, מלחמה, סוף קרב — נשארת אותו קוד. */
+function startGame(stageIdx = null, battleMode = 'quick', tour = null) {
+    S.mode = tour ? 'tournament' : (stageIdx === null ? 'quick' : 'campaign');
     S.stageIdx = stageIdx;
     S.battleMode = battleMode;
-    const stage = stageIdx === null ? null : STAGES[stageIdx];
+    S.tour = tour;
+    const stage = (tour || stageIdx === null) ? null : STAGES[stageIdx];
 
-    S.playerDeck = deckFromCounts(P.deck, 'p');
-    S.enemyDeck = deckFromCounts(stage ? stage.deck : enemyCounts(countsPower(P.deck)), 'e');
+    const myCounts = tour ? tour.deck : P.deck;
+    S.playerDeck = deckFromCounts(myCounts, 'p');
+    S.enemyDeck = deckFromCounts(
+        tour ? enemyCounts(tour.foe.power)
+             : (stage ? stage.deck : enemyCounts(countsPower(P.deck))), 'e');
     S.playerDiscard = []; S.enemyDiscard = [];
     S.playerHand = []; S.enemyHand = [];
     S.pendingSummon = null; S.sacrificeNote = '';
     if (battleMode === 'monsters') { refillHand('p'); refillHand('e'); }
 
-    S.playerHP = START_HP;
-    S.enemyMaxHP = stage ? stage.hp : START_HP;
+    S.playerMaxHP = tour ? tour.playerMaxHP : START_HP;
+    S.playerHP = tour ? tour.playerHP : START_HP;
+    S.enemyMaxHP = tour ? tour.foe.hp : (stage ? stage.hp : START_HP);
     S.enemyHP = S.enemyMaxHP;
 
     S.round = 1;
@@ -710,10 +730,11 @@ function startGame(stageIdx = null, battleMode = 'quick') {
     S.war = null;
     S.stats = { wins: 0, losses: 0, wars: 0, dealt: 0, taken: 0 };
 
-    $('enemyName').textContent = stage ? `${stage.n}. ${stage.name}` : 'היריב';
+    $('enemyName').textContent = tour ? tour.foe.name : (stage ? `${stage.n}. ${stage.name}` : 'היריב');
     $('playerNameLabel').textContent = P.name || 'אתם';
-    $('enemyAvatar').innerHTML = stage
-        ? `<img class="avatar-img" src="${stage.img}" alt="">`
+    const foeImg = tour ? tour.foe.img : (stage ? stage.img : null);
+    $('enemyAvatar').innerHTML = foeImg
+        ? `<img class="avatar-img" src="${foeImg}" alt="">`
         : monsterSVG({ body: 'spiky', c1: '#B3372E', c2: '#F0C24A', eyes: 2, eyeStyle: 'angry', horns: 'twin', mouth: 'fangs', extra: 'none', front: 'none' });
 
     $('roundNum').textContent = '1';
@@ -727,11 +748,15 @@ function startGame(stageIdx = null, battleMode = 'quick') {
     setDrawButton('שלוף!', false);
     $('btnDraw').hidden = battleMode === 'monsters';
     renderHand();
-    setVerdict(stage ? `שלב ${stage.n} — ${stage.name}` : (battleMode === 'monsters' ? 'קרב מפלצות' : 'הזירה פתוחה'),
-               stage ? stage.taunt
-                     : (battleMode === 'monsters'
-                        ? `כל צד מחזיק ${HAND_SIZE} קלפים ובוחר איזה לזמן בכל תור`
-                        : 'הפסד בסיבוב עולה לכם בהפרש הכוח בנקודות חיים'), '');
+    setVerdict(
+        tour ? tour.label
+             : (stage ? `שלב ${stage.n} — ${stage.name}`
+                      : (battleMode === 'monsters' ? 'קרב מפלצות' : 'הזירה פתוחה')),
+        tour ? tour.taunt
+             : (stage ? stage.taunt
+                      : (battleMode === 'monsters'
+                         ? `כל צד מחזיק ${HAND_SIZE} קלפים ובוחר איזה לזמן בכל תור`
+                         : 'הפסד בסיבוב עולה לכם בהפרש הכוח בנקודות חיים')), '');
     updateBars(false);
     $('resultOverlay').classList.remove('open');
     show('gameScreen');
@@ -893,6 +918,7 @@ function refreshCurrency() {
     document.querySelectorAll('.gem-val').forEach(e => e.textContent = fmtCur(gemsOf(P)));
     document.querySelectorAll('.player-name-val').forEach(e => e.textContent = P.name || 'אורח');
     $('adminBadge').style.display = isAdmin(P) ? '' : 'none';
+    $('tourneyLiveDot').hidden = !P.tourney;
 }
 
 /* ---------------- החנות ---------------- */
@@ -1107,6 +1133,13 @@ function openChest(i) {
 
 let draftDeck = {};
 
+/* הקשר העריכה: null = החפיסה הרגילה של הפרופיל. בטורניר הקולוסיאום
+   מוזרק הקשר שמצביע על חפיסת הריצה ועל האוסף שנקנה בתוכה, כדי
+   שאותו מסך עריכה ישרת את שני המקרים בלי שכפול. */
+let editorCtx = null;
+
+function editorOwned() { return editorCtx ? editorCtx.getOwned() : ownedOf(P); }
+
 function miniArt(card) {
     return `<div class="edit-art el-${card.el}${card.img ? ' has-img' : ''}">
         <div class="power-badge">${card.power}</div>
@@ -1116,7 +1149,7 @@ function miniArt(card) {
 
 function renderEditor() {
     // רק קלפים שבבעלות מוצגים; השאר נמצאים בחנות
-    const owned = ownedOf(P);
+    const owned = editorOwned();
     const ids = Object.keys(owned).filter(id => owned[id] > 0)
         .sort((a, b) => byId(b).power - byId(a).power);
     $('editList').innerHTML = ids.map(id => {
@@ -1158,15 +1191,26 @@ function updateEditorMeter() {
         : (gap === 1 ? 'יש קלף אחד עודף' : `יש ${gap} קלפים עודפים`));
 }
 
-function openEditor() {
-    draftDeck = { ...P.deck };
+function openEditor(ctx = null) {
+    editorCtx = ctx;
+    draftDeck = { ...(ctx ? ctx.getDeck() : P.deck) };
+    $('editTitle').textContent = ctx ? ctx.title : 'עריכת החפיסה';
+    $('editHint').textContent = ctx ? ctx.hint
+        : 'מוצגים רק קלפים שבבעלותכם. קלפים נוספים אפשר לקנות בחנות או לזכות בתיבות.';
     renderEditor();
     show('editScreen');
 }
 
+/* יציאה מהעורך חזרה למקום שממנו נכנסו */
+function leaveEditor() {
+    const ctx = editorCtx;
+    editorCtx = null;
+    if (ctx) ctx.onExit(); else show('homeScreen');
+}
+
 function stepCard(id, delta) {
     const cur = draftDeck[id] || 0;
-    const own = ownedOf(P)[id] || 0;
+    const own = editorOwned()[id] || 0;
     const next = cur + delta;
     if (next < 0) return;
     if (next > Math.min(MAX_COPIES, own)) return toast(`יש לכם רק ${own} עותקים`);
@@ -1177,6 +1221,383 @@ function stepCard(id, delta) {
     row.querySelector('.step-count').textContent = next;
     row.classList.toggle('empty', next === 0);
     updateEditorMeter();
+}
+
+/* ============================================================================
+   טורניר
+   הריצה עצמה נשמרת ב-P.tourney כדי שרענון דף לא ימחק רצף ארוך.
+   הלוגיקה (קושי, יריבים, סוגריים, חנות, פרסים) יושבת ב-tournament.js;
+   כאן רק המסכים והחיווט.
+   ============================================================================ */
+
+let tourneySetup = { type: 'colosseum', diff: 'easy', mode: 'quick', fullHeal: false };
+
+const activeRun = () => P.tourney;
+
+function tourneyTypeName(type) { return type === 'war' ? 'מלחמה כוללת' : 'הקולוסיאום'; }
+
+/* ---- מסך בחירת סוג ---- */
+
+function openTourney() {
+    const run = activeRun();
+    $('tourneyResume').hidden = !run;
+    $('tourneyPicks').hidden = !!run;
+    if (run) {
+        const d = TOURNEY_DIFFS[run.diff];
+        const modeName = run.battleMode === 'monsters' ? 'קרב מפלצות' : 'קרב מהיר';
+        const where = run.type === 'colosseum'
+            ? `סיבוב ${run.round}`
+            : (WAR_ROUND_NAMES[run.stage] || 'הגמר');
+        $('tourneyResumeText').innerHTML =
+            `<b>${tourneyTypeName(run.type)}</b> · ${d.name} · ${modeName}<br>
+             ${where} · ${run.wins} ניצחונות`;
+    }
+    show('tourneyScreen');
+}
+
+function openTourneySetup(type) {
+    tourneySetup = { type, diff: 'easy', mode: 'quick', fullHeal: false };
+    $('tourneySetupTitle').textContent = tourneyTypeName(type);
+    $('tourneySetupSub').textContent = type === 'colosseum'
+        ? 'מתחילים מחפיסה סטנדרטית ובונים אותה תוך כדי הריצה.'
+        : 'משחקים עם החפיסה שלכם מול 7 יריבים בסוגריים.';
+    syncTourneySetupUI();
+    $('tourneySetupOverlay').classList.add('open');
+}
+
+function syncTourneySetupUI() {
+    const { type, diff, mode } = tourneySetup;
+    const d = TOURNEY_DIFFS[diff];
+
+    $('tourneyDiffTabs').querySelectorAll('.mode-tab')
+        .forEach(t => t.classList.toggle('active', t.dataset.diff === diff));
+    $('tourneyModeTabs').querySelectorAll('.mode-tab')
+        .forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+    $('tourneyDiffHint').textContent = d.desc;
+
+    /* אפשרות "חיים מלאים" רלוונטית רק לקולוסיאום, ורק בקל/בינוני —
+       במלחמה כוללת כל קרב ממילא מתחיל בחיים מלאים. */
+    const healRelevant = type === 'colosseum' && d.allowFullHeal;
+    $('tourneyHealField').hidden = type !== 'colosseum';
+    $('tourneyFullHeal').disabled = !healRelevant;
+    if (!healRelevant) { tourneySetup.fullHeal = false; $('tourneyFullHeal').checked = false; }
+    $('tourneyHealNote').textContent = healRelevant
+        ? `כל קרב מתחיל מחדש ב-${START_HP} חיים במקום להמשיך מהקודם`
+        : 'ברמה קשה החיים תמיד ממשיכים מהקרב הקודם';
+}
+
+function startTourneyRun() {
+    const { type, diff, mode, fullHeal } = tourneySetup;
+    if (type === 'war' && !deckIsLegal(P.deck, ownedOf(P))) {
+        return toast('צריך חפיסה חוקית של 20 קלפים לפני מלחמה כוללת');
+    }
+    P.tourney = type === 'colosseum'
+        ? newColosseumRun(diff, mode, fullHeal)
+        : newWarRun(diff, mode, P.deck, P.name);
+    saveProfile(P);
+    $('tourneySetupOverlay').classList.remove('open');
+    openTourneyRun();
+}
+
+function abandonTourneyRun() {
+    P.tourney = null;
+    saveProfile(P);
+    toast('הריצה ננטשה');
+    openTourney();
+}
+
+/* ---- לוח הריצה ---- */
+
+function foePreviewHTML(foe, sub) {
+    return `<div class="tourney-foe el-${foe.el || 'red'}">
+        <div class="tourney-foe-art">${foe.img
+            ? `<img src="${foe.img}" alt="" onerror="this.remove()">` : ''}</div>
+        <div class="tourney-foe-info">
+            <div class="tourney-foe-name">${foe.name}</div>
+            <div class="tourney-foe-sub">${sub}</div>
+            <div class="tourney-foe-stats">
+                <span>כוח חפיסה ${foe.power}</span><span>חיים ${foe.hp}</span>
+            </div>
+        </div>
+    </div>`;
+}
+
+function openTourneyRun() {
+    renderTourneyRun();
+    show('tourneyRunScreen');
+}
+
+function renderTourneyRun() {
+    const run = activeRun();
+    if (!run || !run.active) { openTourney(); return; }
+
+    const d = TOURNEY_DIFFS[run.diff];
+    const modeName = run.battleMode === 'monsters' ? 'קרב מפלצות' : 'קרב מהיר';
+    $('tourneyRunTitle').textContent = tourneyTypeName(run.type);
+    $('tourneyGoldChip').hidden = run.type !== 'colosseum';
+    if (run.type === 'colosseum') $('tourneyGoldVal').textContent = run.gold;
+
+    const foe = tourneyCurrentFoe(run);
+    let body = '', dock = '';
+
+    if (run.type === 'colosseum') {
+        const pct = Math.max(0, Math.round((run.hp / run.maxHP) * 100));
+        const unused = tourneyHasUnusedCards(run);
+        const untilShop = TOURNEY_SHOP_EVERY - run.battlesSinceShop;
+
+        body = `
+            <div class="tourney-status">
+                <div class="tourney-stat"><b>${run.round}</b><span>סיבוב</span></div>
+                <div class="tourney-stat"><b>${run.wins}</b><span>ניצחונות</span></div>
+                <div class="tourney-stat"><b>${countsPower(run.deck)}</b><span>כוח החפיסה</span></div>
+            </div>
+            <div class="tourney-hp">
+                <div class="tourney-hp-head">
+                    <span>חיים</span><span>${run.hp} / ${run.maxHP}</span>
+                </div>
+                <div class="deck-bar big"><i style="width:${pct}%" class="${pct <= 30 ? 'low' : ''}"></i></div>
+                <p class="meter-hint">${run.fullHeal
+                    ? 'הגדרתם חיים מלאים בכל סיבוב — הקרב הבא מתחיל בתקרה.'
+                    : 'החיים ממשיכים לקרב הבא כמו שהם. אין ריפוי אוטומטי.'}</p>
+            </div>
+            ${foe ? foePreviewHTML(foe, `${d.name} · ${modeName}`) : ''}
+            ${unused ? `<p class="tourney-warn">יש לכם קלפים שנקנו ולא שובצו — ערכו את החפיסה כדי להשתמש בהם.</p>` : ''}`;
+
+        dock = `
+            <button class="mega-btn primary-cta" data-act="battle">לקרב הבא</button>
+            <div class="btn-row">
+                <button class="mega-btn btn-gold${run.shopOpen ? '' : ' disabled'}" data-act="shop"
+                        ${run.shopOpen ? '' : 'disabled'}>
+                    ${run.shopOpen ? 'חנות הזירה' : `חנות בעוד ${untilShop} קרבות`}
+                </button>
+                <button class="mega-btn btn-blue${unused ? ' pulse-hint' : ''}" data-act="deck">ערכו את החפיסה</button>
+            </div>
+            <button class="mega-btn btn-ghost" data-act="retire">פרשו עם השלל</button>`;
+    } else {
+        const roundName = WAR_ROUND_NAMES[run.stage] || 'הגמר';
+        const left = run.participants.length;
+        body = `
+            <div class="tourney-status">
+                <div class="tourney-stat"><b>${roundName}</b><span>שלב</span></div>
+                <div class="tourney-stat"><b>${left}</b><span>נותרו</span></div>
+                <div class="tourney-stat"><b>${countsPower(P.deck)}</b><span>כוח החפיסה</span></div>
+            </div>
+            <div class="tourney-bracket">
+                ${WAR_ROUND_NAMES.map((nm, i) => `
+                    <div class="bracket-step ${i < run.stage ? 'done' : (i === run.stage ? 'now' : '')}">
+                        <span class="bracket-dot"></span><span>${nm}</span>
+                    </div>`).join('')}
+            </div>
+            ${run.history.length ? `<p class="tourney-history">${run.history
+                .map(h => `${h.round}: ניצחתם את ${h.beat}`).join(' · ')}</p>` : ''}
+            ${foe ? foePreviewHTML(foe, `${roundName} · ${d.name} · ${modeName}`) : ''}
+            <p class="meter-hint">כל קרב בסוגריים מתחיל ב-${START_HP} חיים מלאים.</p>`;
+
+        dock = `
+            <button class="mega-btn primary-cta" data-act="battle">לקרב הבא</button>
+            <button class="mega-btn btn-blue" data-act="deck">ערכו את החפיסה</button>
+            <button class="mega-btn btn-ghost" data-act="retire">פרישה מהטורניר</button>`;
+    }
+
+    $('tourneyRunBody').innerHTML = body;
+    $('tourneyRunDock').innerHTML = dock;
+}
+
+/* ---- קרב טורניר ---- */
+
+function tourneyNextBattle() {
+    const run = activeRun();
+    if (!run || !run.active) return;
+    const foe = tourneyCurrentFoe(run);
+    if (!foe) { toast('לא נמצא יריב'); return; }
+    saveProfile(P);   // היריב שנוצר עכשיו נשמר, כדי שרענון לא יגריל אחר
+
+    const isWar = run.type === 'war';
+    const label = isWar
+        ? `${WAR_ROUND_NAMES[run.stage] || 'הגמר'} — ${foe.name}`
+        : `סיבוב ${run.round} — ${foe.name}`;
+    const taunt = isWar
+        ? 'מנצח אחד עולה הלאה. המפסיד יוצא מהטורניר.'
+        : (run.fullHeal
+            ? 'ניצחון מעביר אתכם לסיבוב הבא בחיים מלאים.'
+            : 'החיים שנותרו לכם ימשיכו איתכם לסיבוב הבא.');
+
+    startGame(null, run.battleMode, {
+        deck: isWar ? P.deck : run.deck,
+        playerHP: isWar ? START_HP : run.hp,
+        playerMaxHP: isWar ? START_HP : run.maxHP,
+        foe, label, taunt
+    });
+}
+
+/* נקרא מ-endGame כשהקרב הוא קרב טורניר */
+function endTournamentBattle(playerWon) {
+    const run = activeRun();
+    if (!run) { show('homeScreen'); return; }
+
+    const res = tourneyAfterBattle(run, playerWon, Math.max(0, S.playerHP));
+    if (playerWon) P.wins++; else P.losses++;
+
+    let sub, rewardLines = [];
+    if (res.over) {
+        rewardLines = grantTourneyReward(run);
+    } else {
+        saveProfile(P);
+    }
+    refreshCurrency();
+
+    const won = playerWon;
+    $('resultEmblem').className = 'result-emblem ' + (won ? 'win' : 'lose');
+    $('resultEmblem').innerHTML = won ? TROPHY : SKULL;
+
+    if (run.type === 'colosseum') {
+        if (!won) {
+            $('resultTitle').textContent = 'נפלתם בזירה';
+            sub = `שרדתם ${res.wins} קרבות בקולוסיאום.`;
+        } else {
+            $('resultTitle').textContent = `ניצחון ${res.wins}`;
+            sub = `זכיתם ב-${res.gold} מטבעות זירה. `
+                + (res.shopOpen ? 'החנות נפתחה — אפשר לשדרג לפני הקרב הבא.'
+                               : 'החיים שנותרו ממשיכים איתכם.');
+        }
+    } else {
+        if (!won) {
+            $('resultTitle').textContent = 'הודחתם';
+            sub = `נעצרתם ב${res.roundName}.`;
+        } else if (res.champion) {
+            $('resultTitle').textContent = 'אלופי הזירה!';
+            sub = 'ניצחתם את כל הסוגריים ולקחתם את התואר.';
+        } else {
+            $('resultTitle').textContent = `עלית ל${res.nextRound}`;
+            sub = `ניצחתם ב${res.roundName}.`;
+        }
+    }
+    if (rewardLines.length) sub += ' פרס הריצה: ' + rewardLines.join(', ') + '.';
+    $('resultSub').textContent = sub;
+
+    $('resultStats').innerHTML = `
+        <div class="stat-tile"><div class="stat-val">${Math.max(0, S.playerHP)}</div><div class="stat-lbl">חיים שנותרו</div></div>
+        <div class="stat-tile"><div class="stat-val">${S.stats.dealt}</div><div class="stat-lbl">נזק שגרמתם</div></div>
+        <div class="stat-tile"><div class="stat-val">${res.wins}</div><div class="stat-lbl">ניצחונות בריצה</div></div>`;
+
+    /* בטורניר אין "שלב הבא" ואין קרב חוזר — כפתור אחד ממשיך את
+       הריצה (או סוגר אותה), ולכן שאר הכפתורים מוסתרים. */
+    $('btnNextStage').style.display = res.over ? 'none' : '';
+    $('btnNextStage').textContent = 'המשיכו בריצה';
+    $('btnResultEdit').style.display = 'none';
+    $('btnRematch').style.display = 'none';
+    $('btnHome').textContent = res.over ? 'סיום' : 'לוח הריצה';
+    $('resultOverlay').classList.add('open');
+    S.busy = false;
+}
+
+/* פרס אמיתי (מטבעות/יהלומים/תיבה) ניתן פעם אחת, בסוף הריצה */
+function grantTourneyReward(run) {
+    const rw = tourneyFinalReward(run);
+    const lines = [];
+    if (rw.coins) { P.coins += rw.coins; lines.push(`${rw.coins} מטבעות`); }
+    if (rw.gems)  { P.gems += rw.gems;  lines.push(`${rw.gems} יהלומים`); }
+    if (rw.chest) {
+        const slot = P.chests.findIndex(c => !c);
+        if (slot >= 0) {
+            const type = rw.champion ? 'diamond' : chestForStage(Math.min(20, run.wins * 2));
+            P.chests[slot] = { type, readyAt: chestReadyAt(type) };
+            lines.push(CHEST_TYPES[type].name);
+        } else {
+            lines.push('כל תאי התיבות מלאים');
+        }
+    }
+    P.tourney = null;
+    saveProfile(P);
+    return lines;
+}
+
+/* פרישה מרצון — שומרת את השלל, בניגוד לנטישה */
+function retireTourneyRun() {
+    const run = activeRun();
+    if (!run) return;
+    const lines = grantTourneyReward(run);
+    refreshCurrency();
+    toast(lines.length ? 'פרשתם עם: ' + lines.join(', ') : 'פרשתם בלי שלל');
+    openTourney();
+}
+
+/* ---- חנות הריצה ---- */
+
+function openTourneyShop() {
+    const run = activeRun();
+    if (!run || run.type !== 'colosseum') return;
+    renderTourneyShop();
+    $('tourneyShopOverlay').classList.add('open');
+}
+
+function renderTourneyShop() {
+    const run = activeRun();
+    if (!run) return;
+    $('tourneyShopGold').textContent = run.gold;
+
+    $('tourneyItems').innerHTML = Object.values(TOURNEY_ITEMS).map(it => {
+        const afford = run.gold >= it.price;
+        const useless = !it.maxUp && run.hp >= run.maxHP;
+        const dis = !afford || useless;
+        return `<div class="tourney-item${dis ? ' dim' : ''}">
+            <div class="tourney-item-info">
+                <div class="tourney-item-name">${it.name}</div>
+                <div class="tourney-item-desc">${it.desc}</div>
+            </div>
+            <button class="shop-buy${dis ? ' disabled' : ''}" data-item="${it.key}" ${dis ? 'disabled' : ''}>
+                <span class="gold-ico"></span>${it.price}
+            </button>
+        </div>`;
+    }).join('');
+
+    $('tourneyShopGrid').innerHTML = CARD_POOL.map(card => {
+        const rar = rarityOf(card);
+        const price = tourneyCardPrice(card);
+        const have = run.owned[card.id] || 0;
+        const maxed = have >= MAX_COPIES;
+        const dis = maxed || run.gold < price;
+        return `<div class="shop-item rar-${rar}">
+            <div class="shop-art el-${card.el}${card.img ? ' has-img' : ''}">
+                <div class="power-badge">${card.power}</div>
+                ${artHTML(card)}
+                ${have ? `<div class="own-badge">×${have}</div>` : ''}
+            </div>
+            <div class="shop-name">${card.name}</div>
+            <div class="shop-rar rar-${rar}">${RARITIES[rar].name}</div>
+            <button class="shop-buy${dis ? ' disabled' : ''}" data-card="${card.id}" ${dis ? 'disabled' : ''}>
+                ${maxed ? `מלא (${MAX_COPIES})` : `<span class="gold-ico"></span>${price}`}
+            </button>
+        </div>`;
+    }).join('');
+}
+
+/* ---- עריכת חפיסת הריצה ---- */
+
+function openTourneyDeckEditor() {
+    const run = activeRun();
+    if (!run) return;
+    if (run.type === 'war') {
+        /* מלחמה כוללת משחקת עם החפיסה האמיתית, ולכן עורכים אותה
+           דרך העורך הרגיל — רק החזרה מובילה בחזרה ללוח הריצה. */
+        openEditor({
+            title: 'חפיסת המלחמה',
+            hint: 'זו החפיסה הרגילה שלכם. שינוי כאן משפיע גם על שאר המשחק.',
+            getOwned: () => ownedOf(P),
+            getDeck: () => P.deck,
+            setDeck: deck => { P.deck = { ...deck }; saveProfile(P); },
+            onExit: openTourneyRun
+        });
+        return;
+    }
+    openEditor({
+        title: 'חפיסת הריצה',
+        hint: 'מוצגים רק קלפים שנקנו בתוך הריצה הזאת. החפיסה הזאת קיימת רק בטורניר.',
+        getOwned: () => run.owned,
+        getDeck: () => run.deck,
+        setDeck: deck => { run.deck = { ...deck }; saveProfile(P); },
+        onExit: openTourneyRun
+    });
 }
 
 /* ---------------- הודעות קצרות ---------------- */
@@ -1406,7 +1827,9 @@ function refreshVisibleScreens() {
     else if (active.id === 'codexScreen') buildCodex();
     else if (active.id === 'editScreen') renderEditor();
     else if (active.id === 'mapScreen') buildMap();
+    else if (active.id === 'tourneyRunScreen') renderTourneyRun();
     else if (active.id === 'adminToolsScreen') buildAdminCardList();
+    if ($('tourneyShopOverlay').classList.contains('open')) renderTourneyShop();
 }
 
 /* ---------------- שם השחקן ---------------- */
@@ -1468,7 +1891,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!btn || btn.disabled) return;
         playFromHand(+btn.dataset.i);
     });
-    $('btnEdit').addEventListener('click', openEditor);
+    /* חובה לעטוף: openEditor מקבל עכשיו הקשר עריכה, ומעבר ישיר של
+       הפניה לפונקציה היה מזריק לתוכו את אירוע הלחיצה */
+    $('btnEdit').addEventListener('click', () => openEditor());
     $('btnShop').addEventListener('click', () => { buildShop(); buildSleeveShop(); show('shopScreen'); });
     $('btnChests').addEventListener('click', openChests);
     $('btnCodex').addEventListener('click', () => show('codexScreen'));
@@ -1480,7 +1905,7 @@ document.addEventListener('DOMContentLoaded', () => {
     $('btnMapBack').addEventListener('click', backHome);
     $('btnShopBack').addEventListener('click', backHome);
     $('btnChestBack').addEventListener('click', () => { leaveChests(); backHome(); });
-    $('btnEditBack').addEventListener('click', backHome);
+    $('btnEditBack').addEventListener('click', leaveEditor);
     document.querySelector('.codex-back').addEventListener('click', backHome);
 
     // קרב
@@ -1488,11 +1913,18 @@ document.addEventListener('DOMContentLoaded', () => {
     $('btnRematch').addEventListener('click', () => startGame(S.stageIdx, S.battleMode));
     $('btnHome').addEventListener('click', () => {
         $('resultOverlay').classList.remove('open');
+        if (S.mode === 'tournament') { activeRun() ? openTourneyRun() : openTourney(); return; }
         S.mode === 'campaign' ? openMap() : show('homeScreen');
     });
-    $('btnQuit').addEventListener('click', () => (S.mode === 'campaign' ? openMap() : show('homeScreen')));
+    /* יציאה באמצע קרב טורניר לא מחשיבה הפסד — הריצה נשמרת רק בין
+       קרבות, ולכן הקרב הנטוש פשוט לא קרה והחיים לא נגעו. */
+    $('btnQuit').addEventListener('click', () => {
+        if (S.mode === 'tournament') { activeRun() ? openTourneyRun() : openTourney(); return; }
+        S.mode === 'campaign' ? openMap() : show('homeScreen');
+    });
     $('btnNextStage').addEventListener('click', () => {
         $('resultOverlay').classList.remove('open');
+        if (S.mode === 'tournament') { openTourneyRun(); return; }
         const next = S.stageIdx + 1;
         next < STAGES.length ? startGame(next, S.battleMode) : openMap();
     });
@@ -1521,6 +1953,68 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!tab || tab.dataset.mode === S.mapMode) return;
         S.mapMode = tab.dataset.mode;
         openMap();
+    });
+
+    // טורניר
+    $('btnTourney').addEventListener('click', openTourney);
+    $('btnTourneyBack').addEventListener('click', backHome);
+    $('btnTourneyRunBack').addEventListener('click', openTourney);
+    $('tourneyPicks').addEventListener('click', e => {
+        const card = e.target.closest('.tourney-card');
+        if (card) openTourneySetup(card.dataset.type);
+    });
+    $('btnTourneyResume').addEventListener('click', openTourneyRun);
+    $('btnTourneyAbandon').addEventListener('click', abandonTourneyRun);
+
+    $('tourneyDiffTabs').addEventListener('click', e => {
+        const tab = e.target.closest('.mode-tab');
+        if (!tab) return;
+        tourneySetup.diff = tab.dataset.diff;
+        syncTourneySetupUI();
+    });
+    $('tourneyModeTabs').addEventListener('click', e => {
+        const tab = e.target.closest('.mode-tab');
+        if (!tab) return;
+        tourneySetup.mode = tab.dataset.mode;
+        syncTourneySetupUI();
+    });
+    $('tourneyFullHeal').addEventListener('change', e => {
+        tourneySetup.fullHeal = e.target.checked;
+    });
+    $('btnTourneyStart').addEventListener('click', startTourneyRun);
+
+    $('tourneyRunDock').addEventListener('click', e => {
+        const btn = e.target.closest('[data-act]');
+        if (!btn || btn.disabled) return;
+        switch (btn.dataset.act) {
+            case 'battle': tourneyNextBattle(); break;
+            case 'shop':   openTourneyShop(); break;
+            case 'deck':   openTourneyDeckEditor(); break;
+            case 'retire': retireTourneyRun(); break;
+        }
+    });
+
+    $('tourneyItems').addEventListener('click', e => {
+        const btn = e.target.closest('[data-item]');
+        if (!btn || btn.disabled) return;
+        const res = tourneyBuyItem(activeRun(), btn.dataset.item);
+        toast(res.msg);
+        if (res.ok) { saveProfile(P); renderTourneyShop(); renderTourneyRun(); }
+    });
+    $('tourneyShopGrid').addEventListener('click', e => {
+        const btn = e.target.closest('[data-card]');
+        if (!btn || btn.disabled) return;
+        const res = tourneyBuyCard(activeRun(), +btn.dataset.card);
+        toast(res.msg);
+        if (res.ok) { saveProfile(P); renderTourneyShop(); renderTourneyRun(); }
+    });
+    /* סגירת החנות היא גם מה שסוגר את "עצירת החנות" הנוכחית — משם
+       והלאה צריך עוד 2 קרבות כדי שהיא תיפתח שוב */
+    $('btnTourneyShopClose').addEventListener('click', () => {
+        const run = activeRun();
+        if (run) { run.shopOpen = false; saveProfile(P); }
+        $('tourneyShopOverlay').classList.remove('open');
+        renderTourneyRun();
     });
 
     // חנות
@@ -1556,7 +2050,7 @@ document.addEventListener('DOMContentLoaded', () => {
     $('btnRewardClose').addEventListener('click', () => $('rewardOverlay').classList.remove('open'));
 
     // עריכת חפיסה
-    $('btnReset').addEventListener('click', () => { draftDeck = repairDeck(ownedOf(P)); renderEditor(); });
+    $('btnReset').addEventListener('click', () => { draftDeck = repairDeck(editorOwned()); renderEditor(); });
     $('editList').addEventListener('click', e => {
         const btn = e.target.closest('.step-btn');
         if (!btn) return;
@@ -1564,10 +2058,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     $('btnSaveDeck').addEventListener('click', () => {
         if (countsTotal(draftDeck) !== DECK_SIZE) return;
-        P.deck = { ...draftDeck };
-        saveProfile(P);
+        if (editorCtx) editorCtx.setDeck(draftDeck);
+        else { P.deck = { ...draftDeck }; saveProfile(P); }
         toast('החפיסה נשמרה');
-        show('homeScreen');
+        leaveEditor();
     });
 
     // שם שחקן
@@ -1581,7 +2075,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // (openMap/show/וכו'), וסגירה מהרקע הייתה מדלגת על הניווט ומשאירה מסך תקוע.
     document.querySelectorAll('.close-overlay').forEach(b =>
         b.addEventListener('click', () => b.closest('.overlay').classList.remove('open')));
-    ['rulesOverlay', 'adminLoginOverlay', 'adminEditOverlay', 'stageDetailOverlay'].forEach(id => {
+    ['rulesOverlay', 'adminLoginOverlay', 'adminEditOverlay', 'stageDetailOverlay',
+     'tourneySetupOverlay'].forEach(id => {
         $(id).addEventListener('click', e => { if (e.target === $(id)) $(id).classList.remove('open'); });
     });
 

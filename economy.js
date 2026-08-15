@@ -196,7 +196,10 @@ function blankProfile() {
         wins: 0,
         losses: 0,
         ownedSleeves: [SLEEVE_DEFAULT],
-        equippedSleeve: SLEEVE_DEFAULT
+        equippedSleeve: SLEEVE_DEFAULT,
+        /* ריצת טורניר פעילה (או null). נשמרת כדי שרענון דף לא ימחק
+           רצף ארוך בקולוסיאום. ראו sanitizeTourneyRun ב-tournament.js */
+        tourney: null
     };
 }
 
@@ -268,6 +271,9 @@ function loadProfile() {
     out.ownedSleeves = Array.isArray(p.ownedSleeves) && p.ownedSleeves.every(k => SLEEVES[k])
         ? p.ownedSleeves : base.ownedSleeves;
     out.equippedSleeve = SLEEVES[p.equippedSleeve] ? p.equippedSleeve : SLEEVE_DEFAULT;
+    /* ריצה שנשמרה חייבת לעבור אימות מלא — פרופיל ישן או ריצה פגומה
+       לא יפילו את המשחק, פשוט לא תהיה ריצה פעילה */
+    out.tourney = typeof sanitizeTourneyRun === 'function' ? sanitizeTourneyRun(p.tourney) : null;
 
     // חפיסה שאינה חוקית (למשל אחרי שינוי חוקים) מוחלפת בברירת מחדל
     const eff = ownedOf(out);

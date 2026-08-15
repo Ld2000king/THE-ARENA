@@ -52,6 +52,9 @@
 
             <div class="home-actions">
                 <button class="mega-btn primary-cta" id="btnCampaign">מפת השלבים</button>
+                <button class="mega-btn btn-tourney" id="btnTourney">
+                    טורניר<span class="tourney-live-dot" id="tourneyLiveDot" hidden>ריצה פעילה</span>
+                </button>
                 <div class="btn-row">
                     <button class="mega-btn btn-pink" id="btnMonsters">קרב מפלצות</button>
                     <button class="mega-btn btn-orange" id="btnPlay">קרב מהיר</button>
@@ -153,6 +156,67 @@
         <div class="stage-list" id="stageList"></div>
     </section>
 
+    <!-- ==================== טורניר: בחירת סוג ==================== -->
+    <section id="tourneyScreen" class="screen">
+        <header class="top-bar">
+            <button class="icon-btn btn-red-soft" id="btnTourneyBack" aria-label="חזרה">
+                <svg viewBox="0 0 24 24"><path d="M6 6 L18 18 M18 6 L6 18"/></svg>
+            </button>
+            <div class="round-chip">טורניר</div>
+            <span style="width:40px"></span>
+        </header>
+
+        <div class="tourney-resume" id="tourneyResume" hidden>
+            <div class="tourney-resume-text" id="tourneyResumeText"></div>
+            <div class="btn-row">
+                <button class="mega-btn primary-cta" id="btnTourneyResume">המשיכו בריצה</button>
+                <button class="mega-btn btn-ghost" id="btnTourneyAbandon">נטישה</button>
+            </div>
+        </div>
+
+        <div class="tourney-picks" id="tourneyPicks">
+            <button class="tourney-card" data-type="colosseum">
+                <div class="tourney-card-head">
+                    <span class="tourney-card-name">הקולוסיאום</span>
+                    <span class="tourney-card-tag tag-endless">החזק שורד</span>
+                </div>
+                <p class="tourney-card-desc">
+                    רצף קרבות בלי סוף. <b>החיים ממשיכים מקרב לקרב</b> — נלחמים עד שפורשים
+                    עם השלל או שהחיים נגמרים. מתחילים מחפיסה סטנדרטית, וכל 2 קרבות
+                    עוצרים בחנות כדי לקנות קלפים, ריפוי ושדרוגים ולבנות את החפיסה מאפס.
+                </p>
+            </button>
+
+            <button class="tourney-card" data-type="war">
+                <div class="tourney-card-head">
+                    <span class="tourney-card-name">מלחמה כוללת</span>
+                    <span class="tourney-card-tag tag-bracket">8 ← 4 ← 2</span>
+                </div>
+                <p class="tourney-card-desc">
+                    סוגריים של 8 משתתפים עם <b>החפיסה שלכם</b>. מנצחים ברבע הגמר,
+                    בחצי הגמר ובגמר כדי לקחת את התואר. כל קרב מתחיל בחיים מלאים,
+                    אבל היריבים נבנים לפי עוצמת החפיסה שלכם.
+                </p>
+            </button>
+        </div>
+        <p class="screen-hint">שני הסוגים זמינים בקרב מהיר ובקרב מפלצות, בשלוש רמות קושי.</p>
+    </section>
+
+    <!-- ==================== טורניר: לוח הריצה ==================== -->
+    <section id="tourneyRunScreen" class="screen">
+        <header class="top-bar">
+            <button class="icon-btn btn-red-soft" id="btnTourneyRunBack" aria-label="חזרה">
+                <svg viewBox="0 0 24 24"><path d="M6 6 L18 18 M18 6 L6 18"/></svg>
+            </button>
+            <div class="round-chip" id="tourneyRunTitle">הקולוסיאום</div>
+            <div class="cur-chip" id="tourneyGoldChip" hidden>
+                <span class="gold-ico"></span><span id="tourneyGoldVal">0</span>
+            </div>
+        </header>
+        <div class="tourney-run-body" id="tourneyRunBody"></div>
+        <div class="draw-dock tourney-dock" id="tourneyRunDock"></div>
+    </section>
+
     <!-- ==================== החנות ==================== -->
     <section id="shopScreen" class="screen">
         <header class="top-bar">
@@ -192,7 +256,7 @@
             <button class="icon-btn btn-red-soft" id="btnEditBack" aria-label="חזרה">
                 <svg viewBox="0 0 24 24"><path d="M6 6 L18 18 M18 6 L6 18"/></svg>
             </button>
-            <div class="round-chip">עריכת החפיסה</div>
+            <div class="round-chip" id="editTitle">עריכת החפיסה</div>
             <button class="icon-btn" id="btnReset" aria-label="איפוס">
                 <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4"/></svg>
             </button>
@@ -204,7 +268,7 @@
                 <span id="deckPowerLabel">כוח כולל 0</span>
             </div>
             <div class="deck-bar big"><i id="deckMeterBar"></i></div>
-            <p class="meter-hint">מוצגים רק קלפים שבבעלותכם. קלפים נוספים אפשר לקנות בחנות או לזכות בתיבות.</p>
+            <p class="meter-hint" id="editHint">מוצגים רק קלפים שבבעלותכם. קלפים נוספים אפשר לקנות בחנות או לזכות בתיבות.</p>
         </div>
 
         <div class="edit-list" id="editList"></div>
@@ -259,7 +323,13 @@
                 <li>הקרב נגמר כשלאחד הצדדים <b>נגמרו נקודות החיים</b>.</li>
                 <li><b>קרב מהיר</b>: הקלף העליון נשלף אוטומטית. <b>קרב מפלצות</b>: כל צד מחזיק יד של 5 קלפים ובוחר בעצמו איזה לזמן בכל תור — כולל את הקלף המכריע במלחמה.</li>
                 <li>בקרב מפלצות, זימון מפלצת ב<b>כוח 6 ומעלה</b> דורש הקרבת מפלצות מהיד — המחיר עולה עם הכוח: <b>כוח 6-7 קורבן אחד, כוח 8-10 שניים, כוח 11 ומעלה שלושה</b>. מפלצת חזקה עולה עד 4 קלפים מהחפיסה — לכן כל זימון גדול מקרב אתכם לסיום הקלפים.</li>
-                <li>כל 50 השלבים במפה זמינים בשני המצבים, ולכל מצב <b>מסלול התקדמות נפרד</b>.</li>
+                <li>כל השלבים במפה זמינים בשני המצבים, ולכל מצב <b>מסלול התקדמות נפרד</b>.</li>
+                <li><b>טורניר</b> הוא מצב נפרד בשלוש רמות קושי, בשני מצבי הקרב:
+                    <b>הקולוסיאום</b> — רצף קרבות שבו החיים ממשיכים מקרב לקרב, מתחילים
+                    מחפיסה סטנדרטית וכל 2 קרבות עוצרים בחנות כדי לקנות קלפים וריפוי
+                    ב<b>מטבעות זירה</b> (מטבע שקיים רק בתוך הריצה); ו<b>מלחמה כוללת</b> —
+                    סוגריים של 8 משתתפים עם החפיסה שלכם, שבהם כל קרב מתחיל בחיים מלאים.
+                    הפרס האמיתי ניתן בסוף הריצה — בפרישה מרצון או בנפילה.</li>
                 <li>כל ניצחון מזכה ב-<b>10 מטבעות</b>, וסיום ראשון של שלב ב-<b>50 מטבעות ו-2 יהלומים</b>.</li>
                 <li>במטבעות קונים בחנות קלפים חדשים — עד 3 עותקים מכל קלף.</li>
             </ol>
@@ -339,6 +409,55 @@
         </div>
     </div>
 
+    <div class="overlay" id="tourneySetupOverlay">
+        <div class="sheet">
+            <h2 class="sheet-title" id="tourneySetupTitle">הקולוסיאום</h2>
+            <p class="tourney-setup-sub" id="tourneySetupSub"></p>
+
+            <div class="setup-field">
+                <span class="setup-label">רמת קושי</span>
+                <div class="mode-tabs" id="tourneyDiffTabs">
+                    <button class="mode-tab active" data-diff="easy">קל</button>
+                    <button class="mode-tab" data-diff="medium">בינוני</button>
+                    <button class="mode-tab" data-diff="hard">קשה</button>
+                </div>
+                <p class="setup-hint" id="tourneyDiffHint"></p>
+            </div>
+
+            <div class="setup-field">
+                <span class="setup-label">מצב הקרב</span>
+                <div class="mode-tabs" id="tourneyModeTabs">
+                    <button class="mode-tab active" data-mode="quick">קרב מהיר</button>
+                    <button class="mode-tab" data-mode="monsters">קרב מפלצות</button>
+                </div>
+            </div>
+
+            <label class="setup-toggle" id="tourneyHealField">
+                <input type="checkbox" id="tourneyFullHeal">
+                <span class="setup-toggle-text">
+                    <b>חיים מלאים בכל סיבוב</b>
+                    <small id="tourneyHealNote">כל קרב מתחיל מחדש ב-20 חיים במקום להמשיך מהקודם</small>
+                </span>
+            </label>
+
+            <button class="mega-btn primary-cta" id="btnTourneyStart">התחילו טורניר</button>
+            <button class="mega-btn btn-ghost close-overlay">ביטול</button>
+        </div>
+    </div>
+
+    <div class="overlay" id="tourneyShopOverlay">
+        <div class="sheet tourney-shop-sheet">
+            <h2 class="sheet-title">חנות הזירה</h2>
+            <div class="tourney-shop-gold">
+                <span class="gold-ico"></span><span id="tourneyShopGold">0</span> מטבעות זירה
+            </div>
+            <p class="screen-hint">קלף שקונים נכנס לאוסף הריצה — אחר כך משבצים אותו דרך "ערכו את החפיסה".</p>
+            <div class="tourney-items" id="tourneyItems"></div>
+            <div class="shop-grid" id="tourneyShopGrid"></div>
+            <button class="mega-btn primary-cta" id="btnTourneyShopClose">סיום קניות</button>
+        </div>
+    </div>
+
     <div class="overlay" id="rewardOverlay">
         <div class="sheet">
             <h2 class="sheet-title" id="rewardTitle">התיבה נפתחה!</h2>
@@ -354,6 +473,7 @@
 
 <script src="monsters.js"></script>
 <script src="economy.js"></script>
+<script src="tournament.js"></script>
 <script src="game.js"></script>
 <!-- async: לעולם לא חוסם את עליית המשחק, גם אם CDN של Firebase איטי
      או לא נגיש. game.js לא מניח שזה כבר טעון — הוא מחכה לאירוע
