@@ -743,6 +743,8 @@ const ICON_LOCK = `<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height
 const ICON_CHECK = `<svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>`;
 const ICON_PLAY = `<svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg>`;
 const ICON_SKULL = `<svg viewBox="0 0 24 24" fill="none"><path d="M5 11a7 7 0 0 1 14 0v3.5c0 1.2-.8 1.8-1.7 1.8h-.5v1.7h-1.6v-1.7H8.8v1.7H7.2v-1.7h-.5C5.8 16.3 5 15.7 5 14.5Z" fill="currentColor"/><circle cx="9.3" cy="11" r="1.5" fill="#07060B"/><circle cx="14.7" cy="11" r="1.5" fill="#07060B"/></svg>`;
+const ICON_CROWN = `<svg viewBox="0 0 24 24" fill="none"><path d="M4 17.5h16l1.3-8-4.3 2.9-2.7-4.9-2.3 4.4-2.3-4.4-2.7 4.9-4.3-2.9 1.3 8Z" fill="currentColor"/><rect x="4" y="17.5" width="16" height="2.3" rx="1" fill="currentColor"/></svg>`;
+const ICON_CHEST_SM = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10a9 9 0 0 1 18 0v9H3v-9Z"/><path d="M3 13h18"/><rect x="10" y="11" width="4" height="5" rx="1"/></svg>`;
 
 function deckPower(deck) {
     return Object.entries(deck).reduce((sum, [id, n]) => sum + byId(id).power * n, 0);
@@ -771,13 +773,17 @@ function buildMap() {
         const icon = done ? ICON_CHECK : (open ? ICON_PLAY : ICON_LOCK);
         const milestone = s.n % 10 === 0;
         const finalBoss = s.n === STAGES.length;
-        return `<button class="path-node el-${s.el} state-${state}${milestone ? ' milestone' : ''}${finalBoss ? ' final-boss' : ''}"
+        const midBoss = milestone && !finalBoss;
+        const rewardStage = !milestone && s.n % 5 === 0;
+        return `<button class="path-node el-${s.el} state-${state}${milestone ? ' milestone' : ''}${finalBoss ? ' final-boss' : ''}${midBoss ? ' mid-boss' : ''}${rewardStage ? ' reward-stage' : ''}"
                 data-i="${i}" style="margin-inline-start:${pathOffset(i)}%" ${done || open ? '' : 'disabled'}>
             <div class="node-ring">
-                ${finalBoss ? `<div class="node-skull">${ICON_SKULL}</div>` : ''}
+                ${finalBoss ? `<div class="node-topmark mark-skull">${ICON_SKULL}</div>` : ''}
+                ${midBoss ? `<div class="node-topmark mark-crown">${ICON_CROWN}</div>` : ''}
                 <div class="node-thumb"><img src="${s.img}" alt="" loading="lazy" onerror="this.remove()"></div>
                 <div class="node-num">${s.n}</div>
                 <div class="node-status">${icon}</div>
+                ${rewardStage ? `<div class="node-reward-mark">${ICON_CHEST_SM}</div>` : ''}
             </div>
             <div class="node-label">${s.name}</div>
         </button>`;
@@ -844,9 +850,21 @@ function openStageDetail(i) {
     const open = s.n === cleared + 1;
     if (!done && !open) { toast('שלב נעול — נצחו בשלב הקודם כדי לפתוח אותו'); return; }
 
+    const finalBoss = s.n === STAGES.length;
+    const midBoss = s.n % 10 === 0 && !finalBoss;
+    const rewardStage = !midBoss && !finalBoss && s.n % 5 === 0;
+    const tag = finalBoss
+        ? `<div class="stage-sheet-tag tag-final">${ICON_SKULL}<span>הבוס האחרון</span></div>`
+        : midBoss
+        ? `<div class="stage-sheet-tag tag-boss">${ICON_CROWN}<span>שלב בוס</span></div>`
+        : rewardStage
+        ? `<div class="stage-sheet-tag tag-reward">${ICON_CHEST_SM}<span>שלב תגמול</span></div>`
+        : '';
+
     $('stageSheet').innerHTML = `
         <div class="stage-sheet-art el-${s.el}"><img src="${s.img}" alt="" onerror="this.remove()"></div>
         <div class="stage-sheet-name">${s.n}. ${s.name}</div>
+        ${tag}
         <div class="stage-sheet-title">${s.title}</div>
         <p class="stage-sheet-taunt">"${s.taunt}"</p>
         <div class="stage-sheet-stats">
