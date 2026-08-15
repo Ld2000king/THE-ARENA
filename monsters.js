@@ -551,6 +551,12 @@ const CARD_POOL = [
       img: 'art/nossa.jpg', imgPos: 'center 16%',
       art: { body: 'tall', c1: '#1A1A1E', c2: '#F5D02E', eyes: 2, eyeStyle: 'glow', horns: 'none', mouth: 'none', extra: 'shards', front: 'plates' } },
 
+    /* ---- גל חמישי ---- */
+
+    { id: 36, name: 'נסיך הסאיאן', power: 8, ability: 'boost', el: 'blue',
+      img: 'art/saiyan-prince.jpg', imgPos: 'center 16%',
+      art: { body: 'tall', c1: '#1C3F72', c2: '#9FE0FF', eyes: 2, eyeStyle: 'angry', horns: 'none', mouth: 'grin', extra: 'aura', front: 'plates' } },
+
     /* ---- אולטרה נדיר: לא מוגרלים בתיבות, נקנים בחנות במחיר גבוה בלבד ---- */
 
     { id: 32, name: 'לומינוס מאיר השמיים', power: 13, ability: 'shield', el: 'gold', ultra: true,

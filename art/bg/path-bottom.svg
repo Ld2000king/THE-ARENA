@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 640">
+  <defs>
+    <radialGradient id="moonCore" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#f3899b"/>
+      <stop offset="45%" stop-color="#d1445b"/>
+      <stop offset="100%" stop-color="#6e1526"/>
+    </radialGradient>
+    <radialGradient id="moonGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#d1445b" stop-opacity="0.55"/>
+      <stop offset="55%" stop-color="#c8394f" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#c8394f" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="skyFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#07060B" stop-opacity="0"/>
+      <stop offset="30%" stop-color="#150f24" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#0a0712" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="400" height="640" fill="url(#skyFade)"/>
+
+  <g fill="#e8def5" opacity="0.5">
+    <circle cx="34" cy="58" r="1.1"/>
+    <circle cx="70" cy="112" r="0.8"/>
+    <circle cx="128" cy="42" r="1.3"/>
+    <circle cx="365" cy="150" r="0.9"/>
+    <circle cx="20" cy="200" r="1"/>
+    <circle cx="250" cy="34" r="0.8"/>
+    <circle cx="180" cy="74" r="1"/>
+    <circle cx="60" cy="150" r="0.9"/>
+  </g>
+
+  <circle cx="300" cy="150" r="112" fill="url(#moonGlow)"/>
+  <circle cx="300" cy="150" r="46" fill="url(#moonCore)"/>
+  <g fill="#8f2438" opacity="0.45">
+    <ellipse cx="288" cy="138" rx="9" ry="6"/>
+    <ellipse cx="315" cy="160" rx="6" ry="4"/>
+    <ellipse cx="295" cy="168" rx="5" ry="3.5"/>
+  </g>
+
+  <g fill="#ffb066" opacity="0.65">
+    <circle cx="255" cy="205" r="1.6"/>
+    <circle cx="340" cy="235" r="1.2"/>
+    <circle cx="270" cy="255" r="1"/>
+  </g>
+
+  <!-- distant ridge with a broken watchtower silhouette -->
+  <path d="M0 300 L45 265 L90 288 L140 250 L190 282 L235 255 L280 285 L330 252 L400 280 L400 640 L0 640 Z"
+        fill="#2b2444" opacity="0.4"/>
+  <g fill="#20193a" opacity="0.42">
+    <rect x="150" y="222" width="13" height="58"/>
+    <path d="M150 222 L156.5 202 L163 222 Z"/>
+    <rect x="153" y="234" width="3" height="7" fill="#07060B" opacity="0.6"/>
+  </g>
+
+  <!-- mid ridge, sharper and closer -->
+  <path d="M0 385 L50 335 L100 368 L155 320 L205 360 L255 322 L305 362 L355 318 L400 350 L400 640 L0 640 Z"
+        fill="#1c1630" opacity="0.62"/>
+
+  <rect x="0" y="372" width="400" height="42" fill="#cbb8ff" opacity="0.045"/>
+
+  <!-- near rocks framing the path -->
+  <path d="M0 470 L42 425 L74 452 L400 452 L400 640 L0 640 Z" fill="#120e1e" opacity="0.85"/>
+  <path d="M400 462 L358 412 L326 440 L400 460 Z" fill="#120e1e" opacity="0.85"/>
+</svg>

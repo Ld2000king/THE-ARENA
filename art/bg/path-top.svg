@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260">
+  <defs>
+    <linearGradient id="topFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#07060B" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#120e1e" stop-opacity="0.7"/>
+    </linearGradient>
+    <radialGradient id="dawnGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#6a4fae" stop-opacity="0.26"/>
+      <stop offset="100%" stop-color="#6a4fae" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="260" fill="url(#topFade)"/>
+  <ellipse cx="120" cy="60" rx="150" ry="70" fill="url(#dawnGlow)"/>
+  <g fill="#c9bdea" opacity="0.4">
+    <circle cx="60" cy="40" r="0.9"/>
+    <circle cx="95" cy="70" r="1.1"/>
+    <circle cx="150" cy="30" r="0.8"/>
+    <circle cx="200" cy="55" r="1"/>
+    <circle cx="330" cy="45" r="0.9"/>
+    <circle cx="360" cy="90" r="1.1"/>
+  </g>
+  <path d="M0 200 L60 160 L110 188 L400 188 L400 260 L0 260 Z" fill="#1a1428" opacity="0.4"/>
+  <path d="M400 200 L340 158 L290 186 L400 186 Z" fill="#1a1428" opacity="0.4"/>
+</svg>
