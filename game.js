@@ -742,6 +742,7 @@ function startGame(stageIdx = null, battleMode = 'quick') {
 const ICON_LOCK = `<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>`;
 const ICON_CHECK = `<svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>`;
 const ICON_PLAY = `<svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg>`;
+const ICON_SKULL = `<svg viewBox="0 0 24 24" fill="none"><path d="M5 11a7 7 0 0 1 14 0v3.5c0 1.2-.8 1.8-1.7 1.8h-.5v1.7h-1.6v-1.7H8.8v1.7H7.2v-1.7h-.5C5.8 16.3 5 15.7 5 14.5Z" fill="currentColor"/><circle cx="9.3" cy="11" r="1.5" fill="#07060B"/><circle cx="14.7" cy="11" r="1.5" fill="#07060B"/></svg>`;
 
 function deckPower(deck) {
     return Object.entries(deck).reduce((sum, [id, n]) => sum + byId(id).power * n, 0);
@@ -769,9 +770,11 @@ function buildMap() {
         const state = done ? 'done' : (open ? 'open' : 'locked');
         const icon = done ? ICON_CHECK : (open ? ICON_PLAY : ICON_LOCK);
         const milestone = s.n % 10 === 0;
-        return `<button class="path-node el-${s.el} state-${state}${milestone ? ' milestone' : ''}"
+        const finalBoss = s.n === STAGES.length;
+        return `<button class="path-node el-${s.el} state-${state}${milestone ? ' milestone' : ''}${finalBoss ? ' final-boss' : ''}"
                 data-i="${i}" style="margin-inline-start:${pathOffset(i)}%" ${done || open ? '' : 'disabled'}>
             <div class="node-ring">
+                ${finalBoss ? `<div class="node-skull">${ICON_SKULL}</div>` : ''}
                 <div class="node-thumb"><img src="${s.img}" alt="" loading="lazy" onerror="this.remove()"></div>
                 <div class="node-num">${s.n}</div>
                 <div class="node-status">${icon}</div>
