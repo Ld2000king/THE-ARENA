@@ -751,33 +751,115 @@ function deckPower(deck) {
 function clearedKey(mode) { return mode === 'monsters' ? 'clearedMonsters' : 'cleared'; }
 function clearedIn(mode) { return P[clearedKey(mode)] || 0; }
 
+/* מיקום כל צומת לרוחב השביל — גל אורגני, לא זיגזג קבוע.
+   הטווח (6%–46%) נשאר תמיד בתוך רוחב המכל, בכל גודל מסך. */
+function pathOffset(i) {
+    return 26 + 20 * Math.sin(i * 0.85 + 0.4);
+}
+
 function buildMap() {
     const cleared = clearedIn(S.mapMode);
     $('progressLabel').textContent = `${cleared}/${STAGES.length}`;
     document.querySelectorAll('#mapModeTabs .mode-tab').forEach(t =>
         t.classList.toggle('active', t.dataset.mode === S.mapMode));
-    $('stageList').innerHTML = STAGES.map((s, i) => {
+
+    const nodes = STAGES.map((s, i) => {
         const done = s.n <= cleared;
         const open = s.n === cleared + 1;
         const state = done ? 'done' : (open ? 'open' : 'locked');
         const icon = done ? ICON_CHECK : (open ? ICON_PLAY : ICON_LOCK);
-        return `<button class="stage-row ${state}" data-i="${i}" ${done || open ? '' : 'disabled'}>
-            <div class="stage-num">${s.n}</div>
-            <div class="stage-art el-${s.el}"><img src="${s.img}" alt=""></div>
-            <div class="stage-info">
-                <div class="stage-name">${s.name}</div>
-                <div class="stage-title">${s.title}</div>
-                <div class="stage-power">כוח ${deckPower(s.deck)} · ${s.hp} חיים</div>
+        const milestone = s.n % 10 === 0;
+        return `<button class="path-node el-${s.el} state-${state}${milestone ? ' milestone' : ''}"
+                data-i="${i}" style="margin-inline-start:${pathOffset(i)}%" ${done || open ? '' : 'disabled'}>
+            <div class="node-ring">
+                <div class="node-thumb"><img src="${s.img}" alt="" loading="lazy" onerror="this.remove()"></div>
+                <div class="node-num">${s.n}</div>
+                <div class="node-status">${icon}</div>
             </div>
-            <div class="stage-state">${icon}</div>
+            <div class="node-label">${s.name}</div>
         </button>`;
     }).join('');
+
+    $('stageList').innerHTML = `<svg class="path-svg" id="pathSvg">
+        <defs><linearGradient id="pathEmberGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#EBC65E"/><stop offset="100%" stop-color="#B4531E"/>
+        </linearGradient></defs>
+    </svg>${nodes}`;
+
+    requestAnimationFrame(drawPathLine);
+}
+
+/* מציירת את קו השביל שמחבר בין מרכזי הצמתים בפועל — כך שהוא
+   תמיד מדויק לא משנה גודל מסך או כמה שם הדמות ארוך. קטע שכבר
+   נכבש מואר בגחלים; מה שעוד לפניכם נשאר קלוש בערפל. */
+function drawPathLine() {
+    const wrap = $('stageList');
+    const svg = $('pathSvg');
+    if (!wrap || !svg) return;
+    const nodeEls = [...wrap.querySelectorAll('.path-node')];
+    if (!nodeEls.length) return;
+
+    const wrapRect = wrap.getBoundingClientRect();
+    const total = wrap.scrollHeight;
+    svg.setAttribute('width', wrapRect.width);
+    svg.setAttribute('height', total);
+    svg.style.height = total + 'px';
+
+    const pts = nodeEls.map(n => {
+        const r = n.querySelector('.node-ring').getBoundingClientRect();
+        return {
+            x: r.left - wrapRect.left + r.width / 2 + wrap.scrollLeft,
+            y: r.top - wrapRect.top + r.height / 2 + wrap.scrollTop,
+            lit: n.classList.contains('state-done') || n.classList.contains('state-open')
+        };
+    });
+
+    let segs = '';
+    for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i], b = pts[i + 1];
+        segs += `<path class="${a.lit ? 'path-line-lit' : 'path-line-dim'}" d="M${a.x},${a.y} L${b.x},${b.y}"/>`;
+    }
+    const defs = svg.querySelector('defs').outerHTML;
+    svg.innerHTML = defs + segs;
+}
+
+let _pathResizeBound = false;
+function bindPathResize() {
+    if (_pathResizeBound) return;
+    _pathResizeBound = true;
+    let t;
+    window.addEventListener('resize', () => {
+        clearTimeout(t);
+        t = setTimeout(() => { if ($('mapScreen').classList.contains('active')) drawPathLine(); }, 150);
+    });
+}
+
+function openStageDetail(i) {
+    const s = STAGES[i];
+    const cleared = clearedIn(S.mapMode);
+    const done = s.n <= cleared;
+    const open = s.n === cleared + 1;
+    if (!done && !open) { toast('שלב נעול — נצחו בשלב הקודם כדי לפתוח אותו'); return; }
+
+    $('stageSheet').innerHTML = `
+        <div class="stage-sheet-art el-${s.el}"><img src="${s.img}" alt="" onerror="this.remove()"></div>
+        <div class="stage-sheet-name">${s.n}. ${s.name}</div>
+        <div class="stage-sheet-title">${s.title}</div>
+        <p class="stage-sheet-taunt">"${s.taunt}"</p>
+        <div class="stage-sheet-stats">
+            <div class="stat-tile"><div class="stat-val">${deckPower(s.deck)}</div><div class="stat-lbl">כוח חפיסה</div></div>
+            <div class="stat-tile"><div class="stat-val">${s.hp}</div><div class="stat-lbl">חיים</div></div>
+        </div>
+        <button class="mega-btn primary-cta" id="btnStageStart" data-i="${i}">התחילו קרב!</button>
+        <button class="mega-btn btn-ghost close-overlay">חזרה</button>`;
+    $('stageDetailOverlay').classList.add('open');
 }
 
 function openMap() {
     buildMap();
+    bindPathResize();
     show('mapScreen');
-    const next = $('stageList').querySelector('.stage-row.open');
+    const next = $('stageList').querySelector('.path-node.state-open');
     if (next) next.scrollIntoView({ block: 'center' });
 }
 
@@ -1398,10 +1480,20 @@ document.addEventListener('DOMContentLoaded', () => {
         openEditor();
     });
     $('stageList').addEventListener('click', e => {
-        const row = e.target.closest('.stage-row');
-        if (!row || row.disabled) return;
+        const node = e.target.closest('.path-node');
+        if (!node) return;
+        openStageDetail(+node.dataset.i);
+    });
+    $('stageSheet').addEventListener('click', e => {
+        if (e.target.closest('.close-overlay')) {
+            $('stageDetailOverlay').classList.remove('open');
+            return;
+        }
+        const btn = e.target.closest('#btnStageStart');
+        if (!btn) return;
+        $('stageDetailOverlay').classList.remove('open');
         $('resultOverlay').classList.remove('open');
-        startGame(+row.dataset.i, S.mapMode);
+        startGame(+btn.dataset.i, S.mapMode);
     });
     $('mapModeTabs').addEventListener('click', e => {
         const tab = e.target.closest('.mode-tab');
@@ -1468,7 +1560,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // (openMap/show/וכו'), וסגירה מהרקע הייתה מדלגת על הניווט ומשאירה מסך תקוע.
     document.querySelectorAll('.close-overlay').forEach(b =>
         b.addEventListener('click', () => b.closest('.overlay').classList.remove('open')));
-    ['rulesOverlay', 'adminLoginOverlay', 'adminEditOverlay'].forEach(id => {
+    ['rulesOverlay', 'adminLoginOverlay', 'adminEditOverlay', 'stageDetailOverlay'].forEach(id => {
         $(id).addEventListener('click', e => { if (e.target === $(id)) $(id).classList.remove('open'); });
     });
 

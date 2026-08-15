@@ -1128,71 +1128,148 @@ button, [role="button"], .clickable { touch-action: manipulation; }
     box-shadow: var(--shadow-depth-sm);
 }
 
+/* ---- שביל השלבים: מסלול קודר דרך הזירה, לא רשימה שטוחה ----
+   כל שלב הוא צומת עגול על שביל מתפתל; ענן אובך וגחלים כהות
+   נותנים תחושת פנטזיה אפלה, והשביל עצמו מואר רק במקומות שכבר
+   נכבשו — מה שעוד לפניכם שקוע בערפל. */
 .stage-list {
-    flex: 1; overflow-y: auto;
-    display: flex; flex-direction: column; gap: 10px;
-    padding-bottom: 6px;
+    position: relative;
+    flex: 1; overflow-y: auto; overflow-x: hidden;
+    padding: 26px 8px 40px;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-y;
-}
-
-.stage-row {
-    position: relative;
-    display: flex; align-items: center; gap: 12px;
-    width: 100%; border: 1px solid rgba(255,255,255,.05); text-align: start;
-    background: linear-gradient(180deg, #1C1729, var(--panel-light) 55%, #120E1B);
-    border-top-color: var(--metal-edge);
+    background:
+        radial-gradient(ellipse 85% 22% at 50% 0%, rgba(140,30,40,.14), transparent 65%),
+        radial-gradient(ellipse 60% 26% at 14% 30%, rgba(60,20,90,.16), transparent 65%),
+        radial-gradient(ellipse 60% 26% at 88% 55%, rgba(15,50,60,.13), transparent 65%),
+        radial-gradient(ellipse 60% 26% at 20% 80%, rgba(90,20,30,.14), transparent 65%),
+        var(--bg-deep-2);
     border-radius: var(--radius-card);
-    padding: 10px 12px;
-    box-shadow: var(--shadow-depth-md);
-    cursor: pointer;
+    border: 1px solid rgba(255,255,255,.04);
+    box-shadow: inset 0 0 70px rgba(0,0,0,.65), inset 0 2px 0 rgba(0,0,0,.4), var(--shadow-depth-md);
+}
+/* אבק/גחלים עדינים מרחפים על פני כל השביל */
+.stage-list::before {
+    content: '';
+    position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+        radial-gradient(rgba(220,170,90,.22) 1px, transparent 1px),
+        radial-gradient(rgba(220,170,90,.14) 1px, transparent 1px);
+    background-size: 130px 160px, 90px 110px;
+    background-position: 10px 20px, 60px 90px;
+    opacity: .5;
+    mix-blend-mode: screen;
+}
+
+.path-svg { position: absolute; top: 0; inset-inline: 0; z-index: 1; pointer-events: none; }
+.path-line-dim {
+    fill: none; stroke: rgba(200,190,220,.22); stroke-width: 5;
+    stroke-linecap: round; stroke-dasharray: 3 10;
+}
+.path-line-lit {
+    fill: none; stroke: url(#pathEmberGrad); stroke-width: 5;
+    stroke-linecap: round; stroke-dasharray: 3 11;
+    filter: drop-shadow(0 0 5px rgba(216,120,40,.55));
+}
+
+.path-node {
+    position: relative; z-index: 2;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    width: 76px; margin-bottom: 30px;
+    border: none; background: none; cursor: pointer;
     font-family: var(--font-body);
-    transition: transform .15s var(--spring), filter .15s ease, box-shadow .2s ease;
+    transition: transform .15s var(--spring), filter .15s ease;
 }
-.stage-row:active { transform: scale(.965) translateY(1px); filter: brightness(.9); }
-.stage-row:focus-visible { outline: 3px solid #8FB4EE; outline-offset: 3px; }
-.stage-row.locked { opacity: .45; filter: grayscale(.8); cursor: default; }
-.stage-row.open {
-    background: linear-gradient(145deg, rgba(22,135,82,.20), rgba(28,30,36,0) 62%), var(--panel-light);
-    box-shadow: var(--glow-green);
-}
-.stage-row.done .stage-state { color: #4ED89B; }
-.stage-row.open .stage-state { color: var(--text-dark); }
-.stage-row.locked .stage-state { color: var(--text-secondary); }
+.path-node:last-child { margin-bottom: 4px; }
+.path-node:active { transform: scale(.93); }
+.path-node:focus-visible .node-ring { outline: 3px solid #8FB4EE; outline-offset: 3px; }
+.path-node.state-locked { cursor: default; }
 
-.stage-num {
-    flex: none; width: 30px;
-    font-family: var(--font-display); font-weight: 900; font-size: 20px;
+.node-ring {
+    position: relative;
+    width: 66px; height: 66px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--el, #6A5A85) 30%, transparent), transparent 70%), var(--surface-2);
+    border: 2px solid rgba(255,255,255,.08);
+    box-shadow: var(--bevel), var(--shadow-depth-sm);
+}
+.path-node.milestone .node-ring { width: 78px; height: 78px; }
+
+.node-thumb {
+    position: absolute; inset: 4px; border-radius: 50%; overflow: hidden;
+    background: var(--surface-3);
+}
+.node-thumb img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; display: block; }
+.node-thumb .mon { width: 100%; height: 100%; }
+
+.node-num {
+    position: absolute; bottom: -6px; inset-inline-end: -4px; z-index: 3;
+    min-width: 24px; height: 24px; padding: 0 4px;
+    display: grid; place-items: center; border-radius: 8px;
+    background: linear-gradient(180deg, #2B2339, #17121F);
+    border: 1.5px solid rgba(255,255,255,.14);
+    font-family: var(--font-display); font-weight: 900; font-size: 12.5px;
     color: var(--text-secondary);
-    text-align: center;
-}
-.stage-row.open .stage-num { color: #4ED89B; }
-.stage-row.done .stage-num { color: var(--text-dark); }
-
-.stage-art {
-    flex: none; width: 58px; height: 58px;
-    border-radius: 16px; overflow: hidden;
-    background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--el) 34%, transparent), transparent 72%), var(--surface-2);
     box-shadow: var(--shadow-depth-sm);
 }
-.stage-art img { width: 100%; height: 100%; object-fit: cover; object-position: center 22%; display: block; }
+.node-status { position: absolute; top: -6px; inset-inline-start: -4px; z-index: 3; width: 24px; height: 24px; display: grid; place-items: center; }
+.node-status svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
 
-.stage-info { flex: 1; min-width: 0; }
-.stage-name { font-family: var(--font-display); font-weight: 700; font-size: 16px; color: var(--text-dark); }
-.stage-title { font-size: 12.5px; color: var(--text-secondary); margin-top: 1px; }
-.stage-power {
-    font-size: 12px; color: var(--text-secondary); margin-top: 3px;
-    font-variant-numeric: tabular-nums;
-}
+.node-label { font-size: 11px; text-align: center; line-height: 1.25; color: var(--text-secondary); max-width: 84px; }
 
-.stage-state { flex: none; width: 30px; display: grid; place-items: center; }
-.stage-state svg {
-    width: 22px; height: 22px;
-    fill: none; stroke: currentColor; stroke-width: 2.2;
-    stroke-linecap: round; stroke-linejoin: round;
+/* נעול — שקוע בערפל, כבוי */
+.path-node.state-locked .node-ring { filter: grayscale(.85) brightness(.55); border-color: rgba(255,255,255,.05); }
+.path-node.state-locked .node-thumb { opacity: .8; }
+.path-node.state-locked .node-num { color: rgba(167,158,188,.5); }
+.path-node.state-locked .node-status { color: rgba(167,158,188,.6); }
+.path-node.state-locked .node-label { opacity: .4; }
+
+/* פתוח — הצומת הבא, פועם באש */
+.path-node.state-open .node-ring {
+    border-color: rgba(235,198,94,.55);
+    box-shadow: var(--bevel), 0 0 0 4px rgba(235,198,94,.14), 0 0 22px rgba(216,120,40,.45);
+    animation: nodePulse 2.1s ease-in-out infinite;
 }
-.stage-row.open .stage-state svg { fill: currentColor; stroke: none; }
+@keyframes nodePulse {
+    0%, 100% { box-shadow: var(--bevel), 0 0 0 4px rgba(235,198,94,.14), 0 0 18px rgba(216,120,40,.4); }
+    50%      { box-shadow: var(--bevel), 0 0 0 7px rgba(235,198,94,.06), 0 0 30px rgba(216,120,40,.65); }
+}
+.path-node.state-open .node-num { color: var(--on-bright); background: linear-gradient(180deg, #EBC65E, #B4842E); border-color: rgba(255,235,180,.5); }
+.path-node.state-open .node-status { color: #EBC65E; }
+
+/* נכבש — חתום, קר יותר אך עדיין מואר */
+.path-node.state-done .node-ring { border-color: rgba(78,216,155,.4); box-shadow: var(--bevel), 0 0 14px rgba(78,216,155,.22); }
+.path-node.state-done .node-num { color: var(--text-dark); }
+.path-node.state-done .node-status { color: #4ED89B; }
+
+/* אבני דרך (10/20/30/40/50) — צמתים גדולים וטקסיים יותר */
+.path-node.milestone .node-num { min-width: 28px; height: 28px; font-size: 14px; }
+.path-node.milestone .node-label { font-family: var(--font-display); font-weight: 700; color: var(--text-dark); font-size: 12px; }
+.path-node.milestone.state-open .node-ring { box-shadow: var(--bevel), 0 0 0 5px rgba(235,198,94,.16), 0 0 30px rgba(216,120,40,.55); }
+
+.path-node.el-red    { --el: var(--neon-red); }
+.path-node.el-orange { --el: var(--neon-orange); }
+.path-node.el-gold   { --el: var(--neon-gold); }
+.path-node.el-green  { --el: var(--neon-lime); }
+.path-node.el-blue   { --el: var(--neon-cyan-deep); }
+.path-node.el-purple { --el: var(--neon-purple); }
+.path-node.el-pink   { --el: var(--neon-pink); }
+
+/* ---- גיליון פרטי שלב ---- */
+.stage-sheet { align-items: center; text-align: center; }
+.stage-sheet-art {
+    width: 120px; height: 120px; border-radius: 50%; overflow: hidden;
+    background: radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--el, #6A5A85) 34%, transparent), transparent 70%), var(--surface-2);
+    border: 2px solid rgba(255,255,255,.1);
+    box-shadow: var(--bevel), var(--shadow-depth-md);
+}
+.stage-sheet-art img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; display: block; }
+.stage-sheet-name { font-family: var(--font-display); font-weight: 800; font-size: 22px; color: var(--text-dark); }
+.stage-sheet-title { font-size: 13.5px; color: var(--text-secondary); margin-top: -8px; }
+.stage-sheet-taunt { font-size: 13.5px; color: var(--text-secondary); font-style: italic; line-height: 1.5; padding: 0 6px; }
+.stage-sheet-stats { display: flex; gap: 10px; width: 100%; }
+.stage-sheet-locked { font-size: 14px; color: var(--text-secondary); }
 
 /* אווטאר היריב בקרב — תמונה במקום ציור */
 .avatar-img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; border-radius: 15px; display: block; }
