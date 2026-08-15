@@ -957,7 +957,7 @@ const CARD_POOL = [
 
     /* ---- גל חמישי ---- */
 
-    { id: 36, name: 'נסיך הסאיאן', power: 8, ability: 'boost', el: 'blue',
+    { id: 36, name: 'שאדו האיום', power: 8, ability: 'nullify', el: 'blue',
       img: 'art/saiyan-prince.jpg', imgPos: 'center 16%',
       art: { body: 'tall', c1: '#1C3F72', c2: '#9FE0FF', eyes: 2, eyeStyle: 'angry', horns: 'none', mouth: 'grin', extra: 'aura', front: 'plates' } },
 
@@ -970,7 +970,7 @@ const CARD_POOL = [
       img: 'art/web-weaver.jpg', imgPos: 'center 18%',
       art: { body: 'tall', c1: '#151B2E', c2: '#4FA8FF', eyes: 2, eyeStyle: 'glow', horns: 'none', mouth: 'none', extra: 'aura', front: 'plates' } },
 
-    { id: 39, name: 'עכביש הזהב', power: 7, ability: 'weaken', el: 'red',
+    { id: 39, name: 'מייק העכביש המוזהב', power: 7, ability: 'nullify', el: 'red',
       img: 'art/web-guardian.jpg', imgPos: 'center 12%',
       art: { body: 'tall', c1: '#7A1420', c2: '#F0C24A', eyes: 2, eyeStyle: 'glow', horns: 'none', mouth: 'grin', extra: 'tentacles', front: 'plates' } },
 
