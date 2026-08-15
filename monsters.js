@@ -557,6 +557,15 @@ const CARD_POOL = [
       img: 'art/saiyan-prince.jpg', imgPos: 'center 16%',
       art: { body: 'tall', c1: '#1C3F72', c2: '#9FE0FF', eyes: 2, eyeStyle: 'angry', horns: 'none', mouth: 'grin', extra: 'aura', front: 'plates' } },
 
+    { id: 37, name: 'טאי אגרוף האור', power: 10, ability: 'boost', el: 'gold',
+      /* אותו פוסטר דו-קרב כמו קלף 1 (dark-fist.jpg); ממסגרים הפעם את הלוחם הזהוב שמשמאל */
+      img: 'art/dark-fist.jpg', imgPos: '22% 20%',
+      art: { body: 'spiky', c1: '#7A4A14', c2: '#F5C24E', eyes: 2, eyeStyle: 'angry', horns: 'crown', mouth: 'maw', extra: 'shards', front: 'plates' } },
+
+    { id: 38, name: 'אורג הקורים', power: 8, ability: 'steal', el: 'blue',
+      img: 'art/web-weaver.jpg', imgPos: 'center 18%',
+      art: { body: 'tall', c1: '#151B2E', c2: '#4FA8FF', eyes: 2, eyeStyle: 'glow', horns: 'none', mouth: 'none', extra: 'aura', front: 'plates' } },
+
     /* ---- אולטרה נדיר: לא מוגרלים בתיבות, נקנים בחנות במחיר גבוה בלבד ---- */
 
     { id: 32, name: 'לומינוס מאיר השמיים', power: 13, ability: 'shield', el: 'gold', ultra: true,
