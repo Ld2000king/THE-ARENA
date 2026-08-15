@@ -411,8 +411,9 @@ button, [role="button"], .clickable { touch-action: manipulation; }
 }
 .avatar {
     width: 46px; height: 46px; flex: none;
-    border-radius: 15px; display: grid; place-items: center;
+    border-radius: 50%; display: grid; place-items: center;
     box-shadow: var(--shadow-depth-sm), inset 0 1px 0 var(--metal-edge);
+    overflow: hidden;
 }
 .avatar svg { width: 34px; height: 34px; }
 .enemy-avatar { background: linear-gradient(165deg, rgba(176,39,66,.34), rgba(126,26,47,.18)); }
@@ -1609,7 +1610,7 @@ button, [role="button"], .clickable { touch-action: manipulation; }
 .stage-sheet-locked { font-size: 14px; color: var(--text-secondary); }
 
 /* אווטאר היריב בקרב — תמונה במקום ציור */
-.avatar-img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; border-radius: 15px; display: block; }
+.avatar-img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; border-radius: 50%; display: block; }
 
 /* ============================================================================
    DECK EDITOR
