@@ -1925,8 +1925,28 @@ document.addEventListener('DOMContentLoaded', () => {
     P = loadProfile();
     captureCardBaseline();
 
-    $('crest').innerHTML = `<img class="crest-img" src="art/logo.jpg" alt="הזירה"
-        onerror="this.remove(); document.getElementById('crest').innerHTML = monsterSVG(CARD_POOL[0].art);">`;
+    $('crest').innerHTML = `<svg viewBox="0 0 100 100" fill="none" stroke="#E8C170" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="50" cy="50" r="46" stroke-width="2"/>
+        <circle cx="50" cy="50" r="40" stroke-width="1" opacity=".45"/>
+        <path d="M50,90 Q22,87 16,58 Q13,39 23,25" stroke-width="2"/>
+        <path d="M19,79 L25,75" stroke-width="1.6"/>
+        <path d="M15,66 L22,64" stroke-width="1.6"/>
+        <path d="M14,52 L21,52" stroke-width="1.6"/>
+        <path d="M16,39 L23,37" stroke-width="1.6"/>
+        <path d="M20,28 L26,29" stroke-width="1.6"/>
+        <path d="M50,90 Q78,87 84,58 Q87,39 77,25" stroke-width="2"/>
+        <path d="M81,79 L75,75" stroke-width="1.6"/>
+        <path d="M85,66 L78,64" stroke-width="1.6"/>
+        <path d="M86,52 L79,52" stroke-width="1.6"/>
+        <path d="M84,39 L77,37" stroke-width="1.6"/>
+        <path d="M80,28 L74,29" stroke-width="1.6"/>
+        <line x1="28" y1="72" x2="72" y2="26" stroke-width="2.4"/>
+        <line x1="34" y1="66" x2="41" y2="73" stroke-width="2.4"/>
+        <circle cx="26" cy="74" r="2.6" fill="#E8C170" stroke="none"/>
+        <line x1="72" y1="72" x2="28" y2="26" stroke-width="2.4"/>
+        <line x1="66" y1="66" x2="59" y2="73" stroke-width="2.4"/>
+        <circle cx="74" cy="74" r="2.6" fill="#E8C170" stroke="none"/>
+    </svg>`;
     renderPlayerAvatar();
 
     buildCodex();
