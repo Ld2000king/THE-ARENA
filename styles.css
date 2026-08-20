@@ -691,6 +691,71 @@ button, [role="button"], .clickable { touch-action: manipulation; }
 .draw-dock { padding-top: 2px; }
 .draw-btn[hidden] { display: none; }
 
+/* ============================================================================
+   מסך הקרב — עיצוב "לוחמים רומאים" (המשך הסגנון ממסך הבית).
+   הקלפים עצמם — צבעי יסוד ונדירות — נשארים בדיוק כפי שהם בכוונה.
+   ============================================================================ */
+#gameScreen .round-chip {
+    background: linear-gradient(180deg, #241609, #1D140E);
+    border: 1px solid var(--metal-edge);
+}
+#gameScreen .round-chip span { color: var(--rm-gold); font-family: var(--font-numeral); }
+
+#gameScreen .player-strip {
+    background: linear-gradient(180deg, #241609, #1D140E 60%, #140D06);
+    border: 1px solid rgba(255,222,179,.08);
+    border-top-color: var(--metal-edge);
+}
+#gameScreen .enemy-avatar { background: linear-gradient(165deg, rgba(150,19,31,.36), rgba(70,10,18,.20)); }
+#gameScreen .me-avatar    { background: linear-gradient(165deg, rgba(217,164,65,.36), rgba(122,79,23,.20)); }
+
+#gameScreen .deck-count {
+    font-family: var(--font-numeral);
+    background: linear-gradient(175deg, #2F2116, #1D140E);
+    border: 1px solid var(--metal-edge);
+}
+
+#gameScreen .arena::before { background: radial-gradient(ellipse 70% 55% at 50% 50%, rgba(150, 19, 31, 0.20), transparent 70%); }
+#gameScreen .arena::after {
+    background-image:
+        radial-gradient(3px 3px at 18% 92%, rgba(230, 180, 90, .95), transparent 65%),
+        radial-gradient(2.5px 2.5px at 68% 96%, rgba(230, 180, 90, .8), transparent 65%),
+        radial-gradient(2.4px 2.4px at 38% 90%, rgba(150, 19, 31, .85), transparent 65%),
+        radial-gradient(3px 3px at 85% 88%, rgba(230, 180, 90, .7), transparent 65%),
+        radial-gradient(2.4px 2.4px at 55% 98%, rgba(230, 180, 90, .75), transparent 65%),
+        radial-gradient(2.7px 2.7px at 8% 85%, rgba(150, 19, 31, .75), transparent 65%),
+        radial-gradient(2.4px 2.4px at 92% 95%, rgba(230, 180, 90, .7), transparent 65%);
+}
+
+/* מצב נייטרלי בלבד — מצבי ניצחון/הפסד/תיקו נשארים בצבעי המשמעות שלהם (ירוק/אדום/זהב) */
+#gameScreen .vs-badge {
+    background: radial-gradient(circle at 35% 30%, #2F2116, #1D140E 70%);
+    border: 1px solid var(--metal-edge);
+}
+#gameScreen .power-readout .final {
+    background: linear-gradient(175deg, #2F2116, #1D140E);
+    border: 1px solid var(--metal-edge);
+}
+
+#gameScreen .verdict {
+    background: linear-gradient(180deg, #241609, #1D140E);
+    border: 1px solid rgba(255,222,179,.08);
+    border-top-color: var(--metal-edge);
+}
+
+#gameScreen .draw-btn {
+    border-radius: 13px;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+#gameScreen .draw-btn::before {
+    content: '';
+    position: absolute; inset: 0; border-radius: inherit;
+    background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.05) 0 1px, transparent 1px 4px);
+    pointer-events: none;
+}
+#gameScreen .draw-btn svg { width: 22px; height: 22px; position: relative; z-index: 1; flex: none; }
+#gameScreen .draw-btn > span { position: relative; z-index: 1; }
+
 /* ---- יד הקלפים בקרב מפלצות ---- */
 .hand-dock { display: flex; flex-direction: column; gap: 6px; }
 .hand-dock[hidden] { display: none; }
