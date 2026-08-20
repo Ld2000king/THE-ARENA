@@ -494,6 +494,43 @@ button, [role="button"], .clickable { touch-action: manipulation; }
     aspect-ratio: 5 / 7;
 }
 .center-col { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 54px; }
+
+/* אווירת רקע לזירה — ממלאת את הרווח הריק מעל ומתחת לקלפים בגחלים עולות */
+.arena::before {
+    content: "";
+    position: absolute;
+    inset: -8px;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(ellipse 70% 55% at 50% 50%, rgba(178, 39, 66, 0.22), transparent 70%);
+}
+.arena::after {
+    content: "";
+    position: absolute;
+    inset: -8px;
+    z-index: -1;
+    pointer-events: none;
+    opacity: .9;
+    background-image:
+        radial-gradient(3px 3px at 18% 92%, rgba(230, 180, 90, .95), transparent 65%),
+        radial-gradient(2.5px 2.5px at 68% 96%, rgba(230, 180, 90, .8), transparent 65%),
+        radial-gradient(2.4px 2.4px at 38% 90%, rgba(214, 70, 96, .85), transparent 65%),
+        radial-gradient(3px 3px at 85% 88%, rgba(150, 100, 220, .8), transparent 65%),
+        radial-gradient(2.4px 2.4px at 55% 98%, rgba(230, 180, 90, .75), transparent 65%),
+        radial-gradient(2.7px 2.7px at 8% 85%, rgba(214, 70, 96, .75), transparent 65%),
+        radial-gradient(2.4px 2.4px at 92% 95%, rgba(230, 180, 90, .7), transparent 65%);
+    background-repeat: no-repeat;
+    animation: embers-rise 8s linear infinite;
+}
+@keyframes embers-rise {
+    0%   { background-position: 18% 100%, 68% 100%, 38% 100%, 85% 100%, 55% 100%, 8% 100%, 92% 100%; opacity: 0; }
+    12%  { opacity: .9; }
+    88%  { opacity: .25; }
+    100% { background-position: 18% -10%, 68% -25%, 38% -5%, 85% -20%, 55% -15%, 8% -10%, 92% -22%; opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .arena::after { animation: none; opacity: .4; }
+}
 .vs-badge {
     font-family: var(--font-display); font-weight: 900; font-size: 15px;
     color: var(--text-secondary);
@@ -508,7 +545,7 @@ button, [role="button"], .clickable { touch-action: manipulation; }
 .vs-badge.tie  { background: radial-gradient(circle at 35% 30%, #F0C06A, #A87B22 75%); color: var(--on-bright); transform: scale(1.1); }
 
 /* --- שלט "מצב מלחמה" --- */
-.arena { position: relative; }
+.arena { position: relative; z-index: 0; }
 .war-banner {
     position: absolute; inset-inline: 0; top: 50%;
     transform: translateY(-50%) scale(.8);
@@ -959,6 +996,19 @@ button, [role="button"], .clickable { touch-action: manipulation; }
     padding: calc(10px + var(--safe-top)) calc(14px + var(--safe-right))
              calc(12px + var(--safe-bottom)) calc(14px + var(--safe-left));
     gap: 10px;
+}
+
+/* זוהר אווירה ברקע — ממלא את השטח הריק מתחת לכרטיסי בחירת המצב */
+#tourneyScreen { position: relative; z-index: 0; }
+#tourneyScreen::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 65% 45% at 50% 100%, rgba(115, 67, 196, 0.28), transparent 70%),
+        radial-gradient(ellipse 45% 30% at 15% 75%, rgba(178, 39, 66, 0.16), transparent 70%);
 }
 
 /* מטבע הזירה — כלכלה סגורה בתוך הריצה, ולכן צבע נפרד מהמטבע האמיתי */
