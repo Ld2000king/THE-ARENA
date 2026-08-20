@@ -2,7 +2,7 @@
    הזירה — premium-app-design tokens (flat/matte obsidian, RTL, mobile-first)
    ============================================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@500;600;700;800;900&family=Poppins:wght@300;400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@500;600;700;800;900&family=Poppins:wght@300;400;600;700;800&family=Cinzel:wght@600;700&display=swap');
 
 :root {
     /* ---- לוח צבעים: פנטזיה אפלה של זירת קרב ----
@@ -73,6 +73,26 @@
 
     --font-display: 'Rubik', 'Poppins', sans-serif;
     --font-body: 'Poppins', 'Rubik', sans-serif;
+    --font-numeral: 'Cinzel', 'Rubik', serif;
+
+    /* ---- לוח צבעים "לוחמים רומאים" — למסך הבית בלבד ---- */
+    --rm-gold-hi:#F5CE7A;    --rm-gold:#D9A441;    --rm-gold-lo:#7A4F17;
+    --rm-crimson-hi:#D8404E; --rm-crimson:#96131F; --rm-crimson-lo:#460A12;
+    --rm-rust-hi:#9E8C77;    --rm-rust:#6E5E4C;    --rm-rust-lo:#362C21;
+    --rm-ember-hi:#E08A4A;   --rm-ember:#C25A1D;   --rm-ember-lo:#6B300D;
+    --rm-copper-hi:#DDA366;  --rm-copper:#B5732E;  --rm-copper-lo:#5E3712;
+    --rm-umber-hi:#9C7A54;   --rm-umber:#6B4A2E;   --rm-umber-lo:#33220F;
+    --rm-steel-hi:#8E99A8;   --rm-steel:#5B6472;   --rm-steel-lo:#262B31;
+    --rm-purple-hi:#8E4C99;  --rm-purple:#5B1F63;  --rm-purple-lo:#26102A;
+
+    --rm-glow-gold:    0 8px 24px rgba(217,164,65,.36), var(--shadow-depth-sm);
+    --rm-glow-crimson: 0 8px 22px rgba(150,19,31,.42),  var(--shadow-depth-sm);
+    --rm-glow-rust:    0 8px 20px rgba(90,78,63,.30),   var(--shadow-depth-sm);
+    --rm-glow-ember:   0 8px 22px rgba(194,90,29,.36),  var(--shadow-depth-sm);
+    --rm-glow-copper:  0 8px 22px rgba(181,115,46,.34), var(--shadow-depth-sm);
+    --rm-glow-umber:   0 8px 20px rgba(107,74,46,.26),  var(--shadow-depth-sm);
+    --rm-glow-steel:   0 8px 20px rgba(91,100,114,.30), var(--shadow-depth-sm);
+    --rm-glow-purple:  0 8px 22px rgba(91,31,99,.40),   var(--shadow-depth-sm);
 
     --app-max-width: 460px;
     --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -374,6 +394,68 @@ button, [role="button"], .clickable { touch-action: manipulation; }
 .btn-row .mega-btn { flex: 1; }
 .btn-gold { background: var(--grad-gold); color: var(--on-bright); box-shadow: var(--glow-gold); }
 .home-foot { margin-top: 18px; font-size: 13px; color: var(--text-secondary); opacity: .8; }
+
+/* ============================================================================
+   מסך הבית — עיצוב "לוחמים רומאים": ארגמן קולוסיאום, ברונזה ליגיונרית,
+   ברזל מלוטש וסגול קיסרי (שמור בלעדית לכפתור האדמין). כל הכללים כאן
+   מוגבלים ל-#homeScreen כדי לא לגעת בכפתורים המשותפים ביתר המסכים.
+   ============================================================================ */
+#homeScreen::before { background: radial-gradient(circle, rgba(150,19,31,.42), rgba(150,19,31,.10) 55%, transparent 70%); }
+#homeScreen::after  { background: radial-gradient(circle, rgba(217,164,65,.30), rgba(217,164,65,.06) 55%, transparent 70%); }
+
+#homeScreen .crest {
+    border-radius: 50%;
+    background: radial-gradient(circle at 34% 30%, #3A281B, var(--panel-light) 68%);
+    border: none;
+    box-shadow:
+        0 0 0 2px var(--rm-gold-lo),
+        0 0 0 3px rgba(0,0,0,.5),
+        0 0 0 7px var(--surface-2),
+        var(--shadow-depth-lg), inset 0 0 22px rgba(0,0,0,.5);
+}
+#homeScreen .crest svg { width: 92px; height: 92px; }
+
+#homeScreen .main-title {
+    background: linear-gradient(100deg,
+        var(--rm-gold-lo) 0%, var(--rm-gold) 24%, #F7DA92 50%, var(--rm-gold) 76%, var(--rm-gold-lo) 100%);
+    background-size: 200% 100%;
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 3px 3px rgba(0,0,0,.55)) drop-shadow(0 0 22px rgba(150,19,31,.30));
+}
+
+#homeScreen .profile-chip, #homeScreen .cur-chip {
+    background: linear-gradient(175deg, var(--surface-2), #1D140E);
+    border: 1px solid var(--metal-edge);
+}
+#homeScreen .cur-chip { font-family: var(--font-numeral); }
+#homeScreen .gem-ico { background: linear-gradient(160deg, var(--rm-purple-hi), var(--rm-purple-lo)); }
+
+#homeScreen .mega-btn {
+    position: relative;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    border-radius: 13px;
+    padding: 15px 12px;
+}
+#homeScreen .mega-btn svg { width: 19px; height: 19px; flex: none; position: relative; z-index: 1; }
+#homeScreen .mega-btn > span { position: relative; z-index: 1; white-space: nowrap; }
+#homeScreen .btn-row .mega-btn { font-size: 16.5px; }
+#homeScreen .mega-btn.rm-textured::before {
+    content: '';
+    position: absolute; inset: 0; border-radius: inherit;
+    background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.035) 0 1px, transparent 1px 4px);
+    pointer-events: none;
+}
+#homeScreen .btn-ghost { background: linear-gradient(175deg, #251A12, #17110B); border: 1px solid var(--metal-edge); }
+
+#homeScreen .rm-gold    { color: var(--on-bright);   background: linear-gradient(165deg, var(--rm-gold-hi), var(--rm-gold) 52%, var(--rm-gold-lo)); box-shadow: var(--bevel), var(--rm-glow-gold); }
+#homeScreen .rm-crimson { color: var(--text-dark);   background: linear-gradient(165deg, var(--rm-crimson-hi), var(--rm-crimson) 52%, var(--rm-crimson-lo)); box-shadow: var(--bevel), var(--rm-glow-crimson); }
+#homeScreen .rm-rust    { color: var(--text-dark);   background: linear-gradient(165deg, var(--rm-rust-hi), var(--rm-rust) 52%, var(--rm-rust-lo)); box-shadow: var(--bevel), var(--rm-glow-rust); }
+#homeScreen .rm-ember   { color: var(--text-dark);   background: linear-gradient(165deg, var(--rm-ember-hi), var(--rm-ember) 52%, var(--rm-ember-lo)); box-shadow: var(--bevel), var(--rm-glow-ember); }
+#homeScreen .rm-copper  { color: var(--on-bright);   background: linear-gradient(165deg, var(--rm-copper-hi), var(--rm-copper) 52%, var(--rm-copper-lo)); box-shadow: var(--bevel), var(--rm-glow-copper); }
+#homeScreen .rm-umber   { color: var(--text-dark);   background: linear-gradient(165deg, var(--rm-umber-hi), var(--rm-umber) 52%, var(--rm-umber-lo)); box-shadow: var(--bevel), var(--rm-glow-umber); }
+#homeScreen .rm-steel   { color: var(--text-dark);   background: linear-gradient(165deg, var(--rm-steel-hi), var(--rm-steel) 52%, var(--rm-steel-lo)); box-shadow: var(--bevel), var(--rm-glow-steel); }
+#homeScreen .rm-purple  { color: var(--text-dark);   background: linear-gradient(165deg, var(--rm-purple-hi), var(--rm-purple) 52%, var(--rm-purple-lo)); box-shadow: var(--bevel), var(--rm-glow-purple); }
 
 /* ============================================================================
    GAME SCREEN
